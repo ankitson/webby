@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lissajous Garden</title>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --panel: #161a22;
+    --text: #e6e8ee;
+    --muted: #8b93a7;
+    --accent: #5ee0c0;
+    --border: #242a36;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100%;
+    padding: 24px;
+    gap: 20px;
+  }
+  header { text-align: center; }
+  h1 { font-size: 1.4rem; font-weight: 600; letter-spacing: 0.5px; }
+  p.sub { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+  canvas {
+    background: radial-gradient(circle at 50% 40%, #11151d 0%, #0a0c10 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    touch-action: none;
+  }
+  .controls {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 14px 16px;
+    align-items: center;
+    width: min(560px, 100%);
+  }
+  label { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .val { font-variant-numeric: tabular-nums; font-size: 0.85rem; min-width: 42px; text-align: right; color: var(--accent); }
+  footer { color: var(--muted); font-size: 0.75rem; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Lissajous Garden</h1>
+    <p class="sub">A pair of perpendicular oscillators tracing each other out.</p>
+  </header>
+
+  <canvas id="c" width="520" height="520"></canvas>
+
+  <div class="controls">
+    <label for="a">freq&nbsp;a</label>
+    <input id="a" type="range" min="1" max="9" step="1" value="3">
+    <span class="val" id="av">3</span>
+
+    <label for="b">freq&nbsp;b</label>
+    <input id="b" type="range" min="1" max="9" step="1" value="2">
+    <span class="val" id="bv">2</span>
+
+    <label for="s">speed</label>
+    <input id="s" type="range" min="0" max="2" step="0.01" value="0.6">
+    <span class="val" id="sv">0.60</span>
+
+    <label for="t">trail</label>
+    <input id="t" type="range" min="0.01" max="0.3" step="0.01" value="0.08">
+    <span class="val" id="tv">0.08</span>
+  </div>
+
+  <footer>html-bag · pure canvas, zero dependencies</footer>
+
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  function fit() {
+    const css = Math.min(520, window.innerWidth - 48);
+    canvas.style.width = css + 'px';
+    canvas.style.height = css + 'px';
+    canvas.width = css * dpr;
+    canvas.height = css * dpr;
+  }
+  fit();
+  window.addEventListener('resize', fit);
+
+  const $ = id => document.getElementById(id);
+  const sliders = {
+    a: $('a'), b: $('b'), s: $('s'), t: $('t'),
+  };
+  const labels = { a: $('av'), b: $('bv'), s: $('sv'), t: $('tv') };
+
+  function sync() {
+    labels.a.textContent = sliders.a.value;
+    labels.b.textContent = sliders.b.value;
+    labels.s.textContent = (+sliders.s.value).toFixed(2);
+    labels.t.textContent = (+sliders.t.value).toFixed(2);
+  }
+  Object.values(sliders).forEach(el => el.addEventListener('input', sync));
+  sync();
+
+  let phase = 0;
+
+  function frame() {
+    const W = canvas.width, H = canvas.height;
+    const a = +sliders.a.value;
+    const b = +sliders.b.value;
+    const speed = +sliders.s.value;
+    const trail = +sliders.t.value;
+
+    // fade previous frame for the comet trail
+    ctx.fillStyle = `rgba(10,12,16,${trail})`;
+    ctx.fillRect(0, 0, W, H);
+
+    const cx = W / 2, cy = H / 2;
+    const R = Math.min(W, H) * 0.42;
+    const N = 600;
+
+    ctx.lineWidth = 1.4 * dpr;
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const u = (i / N) * Math.PI * 2;
+      const x = cx + R * Math.sin(a * u + phase);
+      const y = cy + R * Math.sin(b * u);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    const hue = (phase * 40) % 360;
+    ctx.strokeStyle = `hsl(${hue}, 70%, 62%)`;
+    ctx.shadowColor = `hsl(${hue}, 80%, 60%)`;
+    ctx.shadowBlur = 12 * dpr;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // leading dot
+    const lx = cx + R * Math.sin(a * phase * 0.0 + phase);
+    const ly = cy + R * Math.sin(b * phase * 0.0);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(lx, ly, 2.5 * dpr, 0, Math.PI * 2);
+    ctx.fill();
+
+    phase += speed * 0.02;
+    requestAnimationFrame(frame);
+  }
+  frame();
+</script>
+</body>
+</html>
