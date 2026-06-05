@@ -1,0 +1,16 @@
+{
+  "name": "webby",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Drop a simple HTML app and serve it — internally via Caddy (html-bag) or publicly via Cloudflare Pages.",
+  "type": "module",
+  "bin": {
+    "webby": "./src/cli.ts"
+  },
+  "scripts": {
+    "webby": "bun run ./src/cli.ts"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

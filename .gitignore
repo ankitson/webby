@@ -1,0 +1,12 @@
+node_modules/
+.wrangler/
+
+# Secrets / environment — never commit.
+.env.secret
+*.secret
+
+# Generated browse listing for the public bag (rebuilt on every deploy).
+public/index.html
+
+# Scratch apps in any bag are never committed (matches html-bag's tmp* rule).
+public/tmp*
