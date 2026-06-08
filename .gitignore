@@ -1,5 +1,6 @@
 node_modules/
 .wrangler/
+target/
 
 # Secrets / environment — never commit.
 .env.secret

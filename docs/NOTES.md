@@ -19,3 +19,18 @@ Change:
 - `webby ls --bag <name>` and `webby ls -b <name>` list one bag.
 - `add`, `deploy`, `rm`, `open`, and `domain` use the same `--bag` / `-b` selector where bag selection applies.
 - Help text, README, skill docs, and Justfile recipes now use the bag selector convention.
+
+## 2026-06-08 — Rust OSS Provider Rewrite
+
+Goal: turn the OSS provider experiment into a Rust CLI that is easier to install, starts with no config, and has tested provider deploy paths.
+
+Key decisions:
+- Replace the Bun/TypeScript CLI with a Cargo binary named `webby`.
+- Make `local` the default bag for new users; `webby add ./app.html && webby serve` works with no config.
+- Keep `-b` / `--bag` as the only bag selector across bag-aware commands.
+- Keep built-in `local`, `tailnet`, `funnel`, and `public` bags, with optional `internal` Caddy compatibility from env.
+- Test deploy command construction with fake `tailscale` and `wrangler` executables instead of live external services.
+
+Next steps:
+- Decide on release packaging and whether to publish binaries in addition to `cargo install`.
+- Revisit Cloudflare domain attachment once the preferred Wrangler/API path is confirmed for OSS users.

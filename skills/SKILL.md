@@ -1,65 +1,94 @@
 ---
 name: webby
-description: Serve a simple HTML app — internally via the home Caddy (instant, LAN/Tailscale) or publicly via Cloudflare Pages. Use when asked to "put this online", "drop an HTML page", "make a quick tool/visualization reachable", or publish to the public mini site.
+description: Serve or publish a static HTML app to localhost, Tailscale Serve, Tailscale Funnel, Cloudflare Pages, Caddy, or a custom command provider. Use when asked to put an HTML page/tool/visualization online, publish to a tailnet URL, or publish to a public mini site.
 ---
 
 # webby
 
-drop an html app, get a url. internal = instant Caddy. public = Cloudflare Pages.
+Drop a static app into a bag and get a URL. An app is a folder with
+`index.html` or a standalone `.html` file. Name it `tmp*` for scratch.
 
-an app is a **folder with `index.html`** or a **standalone `.html` file**.
-name it `tmp*` for throwaway (gitignored, shown under a Temp heading).
-
-## run it
+## Run From This Repo
 
 ```sh
-bunx github:ankitson/webby <cmd>    # e.g. bunx github:ankitson/webby where
+cargo run -- where
+cargo run -- add ./clock.html
+cargo run -- serve
 ```
 
-## first: find the bags
-
-paths and urls aren't hardcoded here — ask webby:
+Installed CLI:
 
 ```sh
 webby where
 ```
 
-run everything from the webby dir (`bun run src/cli.ts …`), or via the wrapper if installed.
-
-## internal (instant, no deploy)
+## Bags
 
 ```sh
-webby add ./clock.html              # → live now on the tools host
-webby add ./dashboard               # folder app
-webby add ./scratch.html --tmp      # throwaway
+webby ls             # all bags
+webby ls -b local    # one bag
+webby where          # paths and provider URLs
 ```
 
-caddy serves it the moment it lands. no build, no deploy.
+Built-ins:
 
-## public (Cloudflare Pages)
+- `local`: localhost preview, no config.
+- `tailnet`: `tailscale serve`.
+- `funnel`: `tailscale funnel`.
+- `public`: Cloudflare Pages.
+- `internal`: optional Caddy compatibility when configured by env.
+
+## Local Preview
 
 ```sh
-webby pub ./vancouver-tides         # stage in public/ + deploy
-webby deploy --bag public           # re-push the whole public dir
+webby add ./clock.html
+webby serve
 ```
 
-deploy is just "push the `public/` directory" — nothing more.
-public apps also appear on the internal listing automatically (symlinked).
+This is safe and local-only.
 
-> **always confirm with the user before a public deploy** (`pub` / `deploy --bag public`).
-> it publishes to the live internet. internal `add` is safe — deploy is not.
-
-## the rest
+## Tailnet
 
 ```sh
-webby ls                # list all bags
-webby ls -b public      # list one bag
-webby open <name>       # print/open the url
-webby rm <name> -b public
+webby add ./dashboard -b tailnet
+webby deploy -b tailnet
+```
+
+Requires authenticated `tailscale`.
+
+## Temporary Public
+
+```sh
+webby add ./demo -b funnel
+webby deploy -b funnel
+```
+
+Always confirm with the user before Funnel. It exposes the app publicly from
+the current machine.
+
+## Durable Public
+
+```sh
+webby pub ./vancouver-tides
+webby deploy -b public
+```
+
+Always confirm with the user before `pub` or `deploy -b public`. Cloudflare
+Pages publishes to the live internet and expects `CLOUDFLARE_ACCOUNT_ID` plus
+`CLOUDFLARE_API_TOKEN`, or a configured token command/reference.
+
+## Common Commands
+
+```sh
+webby add <path> [-b bag] [--name name] [--tmp]
+webby rm <name> [-b bag]
+webby open <name> [-b bag]
 webby domain <host> -b public
+webby init
 ```
 
-## notes
+## Notes
 
-- secrets/domains live in `.env.secret`, never in code.
-- bun + typescript; `wrangler` via `bunx`.
+- Rust CLI; use `cargo install --path .` locally.
+- `-b` / `--bag` is the only bag selector. There is no `--public` flag.
+- `command` providers can use `{dir}`, `{label}`, and `{url}` template values.

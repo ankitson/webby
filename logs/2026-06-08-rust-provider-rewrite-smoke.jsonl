@@ -1,0 +1,7 @@
+{"command":"cargo check","status":"pass","summary":"Rust CLI compiled successfully after replacing the Bun/TypeScript implementation"}
+{"command":"cargo test","status":"pass","summary":"provider integration suite passed for local, caddy, tailscale-serve, tailscale-funnel, cloudflare-pages, and command deploy paths"}
+{"command":"cargo run -- --help","status":"pass","summary":"Rust CLI help shows zero-config add/serve flow and -b/--bag selection"}
+{"command":"WEBBY_ENV=/tmp/webby-rust-smoke/missing.env XDG_DATA_HOME=/tmp/webby-rust-smoke/data XDG_CONFIG_HOME=/tmp/webby-rust-smoke/config cargo run -- add /tmp/webby-rust-smoke/smoke.html --name smoke","status":"pass","summary":"zero-config add stages into the local bag"}
+{"command":"WEBBY_ENV=/tmp/webby-rust-smoke/missing.env XDG_DATA_HOME=/tmp/webby-rust-smoke/data XDG_CONFIG_HOME=/tmp/webby-rust-smoke/config cargo run -- ls","status":"pass","summary":"zero-config ls lists local, tailnet, funnel, and public bags"}
+{"command":"cargo run -- where","status":"pass","summary":"repo .env.secret adds private public and internal bags while keeping local as default"}
+{"command":"cargo run -- ls -b public","status":"pass","summary":"Rust CLI lists the existing public bag without deploying"}

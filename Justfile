@@ -1,49 +1,55 @@
 set shell := ["bash", "-cu"]
 
-# List recipes
+# List recipes.
 default:
     @just --list
 
-# Stage an app into a bag (internal by default). Pass extra flags after `--`.
+# Build the Rust CLI.
+build:
+    cargo build
+
+# Run formatter, compiler, and tests.
+check:
+    cargo fmt --check
+    cargo check
+    cargo test
+
+# Run webby from this checkout. Pass CLI args after `--`.
+run *args:
+    cargo run -- {{args}}
+
+# Stage an app into a bag. Pass extra flags after `--`.
 add path *flags:
-    bun run src/cli.ts add {{path}} {{flags}}
+    cargo run -- add {{path}} {{flags}}
 
 # Add to the public bag and deploy to Cloudflare Pages.
 pub path *flags:
-    bun run src/cli.ts pub {{path}} {{flags}}
+    cargo run -- pub {{path}} {{flags}}
 
-# Regenerate an index and deploy a Pages bag. Pass flags after `--`, e.g. `-- --bag public`.
+# Activate/deploy a bag. Pass flags after `--`, e.g. `-- -b public`.
 deploy *flags:
-    bun run src/cli.ts deploy {{flags}}
+    cargo run -- deploy {{flags}}
 
-# List all bags, or pass `-- --bag <name>` / `-- -b <name>`.
+# List all bags, or pass `-- -b <name>`.
 ls *flags:
-    bun run src/cli.ts ls {{flags}}
+    cargo run -- ls {{flags}}
+
+# Serve a bag locally.
+serve *flags:
+    cargo run -- serve {{flags}}
 
 # Attach a custom domain to a Pages bag. Pass `-- -b public`.
 domain host *flags:
-    bun run src/cli.ts domain {{host}} {{flags}}
+    cargo run -- domain {{host}} {{flags}}
 
-# Build a React/JSX internal app into a self-contained bundle.js.
-build name:
-    bun build internal/{{name}}/app.jsx --bundle --outfile internal/{{name}}/bundle.js
-
-# Build all internal JSX apps that have an app.jsx.
-build-all:
-    #!/usr/bin/env bash
-    for dir in internal/*/; do
-      if [ -f "${dir}app.jsx" ]; then
-        name="$(basename "${dir}")"
-        echo "Building ${name}..."
-        bun build "${dir}app.jsx" --bundle --outfile "${dir}bundle.js"
-      fi
-    done
-
-# Install webby on PATH from this checkout (tracks local edits).
+# Install webby on PATH from this checkout.
 install:
-    bun link
+    cargo install --path .
 
-# Print the install one-liners for others.
-distribute:
-    @echo "bun install -g github:ankitson/webby   # persistent"
-    @echo "bunx github:ankitson/webby <cmd>       # one-off (npx-style)"
+# Install webby from the Git repository.
+install-git:
+    cargo install --git https://github.com/ankitson/webby --branch feat/oss-host-providers
+
+# Build a React/JSX app asset with Bun when an app needs it.
+build-jsx app:
+    bun build {{app}}/app.jsx --bundle --outfile {{app}}/bundle.js

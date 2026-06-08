@@ -1,95 +1,149 @@
 # webby
 
-Drop a simple HTML app and serve it — **internally** via the home Caddy
-(html-bag) or **publicly** via Cloudflare Pages. One tool, two backends.
+Drop a static HTML app into a bag and get a URL.
 
-A *bag* is a directory of standalone HTML apps plus a way to serve it:
-
-| bag        | backend | served at                       | reach                    |
-| ---------- | ------- | ------------------------------- | ------------------------ |
-| `internal` | Caddy   | `tools.home.example.com`       | LAN / Tailscale, instant |
-| `public`   | Pages   | `mini.example.com`             | public internet, always-on |
-
-An "app" is either a **folder with `index.html`** (plus assets) or a
-**standalone `.html` file**. Anything whose name starts with `tmp` is treated
-as scratch: shown under a separate *Temp* heading and gitignored.
+webby is for tiny tools, one-off dashboards, agent-made prototypes, and
+standalone HTML files. It works with no config on localhost, and can also
+activate tailnet, temporary public, durable public, or custom hosting.
 
 ## Install
 
-webby is a [Bun](https://bun.sh) CLI (it uses Bun APIs, so it needs `bun` — not
-`node`/`npx`). There's no binary to download; install straight from the repo:
-
 ```sh
-bun install -g github:ankitson/webby     # puts `webby` on your PATH
-# one-off, no install (the bunx / npx equivalent):
-bunx github:ankitson/webby where
+cargo install --git https://github.com/ankitson/webby
 ```
 
-Configure it from the environment (see [Configuration](#configuration)), then:
-
-## Usage
+From a checkout:
 
 ```sh
-webby add <path> [--name N] [--tmp] [--bag N]    # stage an app into a bag
-webby pub <path> [--name N] [--tmp]              # add to public bag + deploy
-webby deploy --bag <name>                        # regenerate index + deploy (pages bags)
-webby ls   [--bag <name>]                        # list all bags, or one bag
-webby rm   <name> [--bag N]                      # remove an app
-webby open <name> [--bag N]                      # print/open an app URL
-webby domain <hostname> --bag <pages-bag>        # attach a custom domain
+cargo install --path .
 ```
 
-- **Internal** is a plain file copy into the `internal/` dir — live immediately
-  via Caddy's live mount, no deploy step.
-- **Public** copies into `public/`, regenerates a static browse `index.html`,
-  and runs `wrangler pages deploy public/` — deploy is just "push the directory".
-- The internal listing shows **both** bags: every public app is mirrored into
-  `internal/` as a relative symlink (`../public/<app>`), so the tools host lists
-  internal + public apps in one flat page. `public/` stays the single source of
-  truth; the symlinks are maintained automatically on `pub` / `deploy`.
+## Start Fast
 
-### Examples
+No config required:
 
 ```sh
-webby add ./clock.html                 # → tools.home.example.com/clock.html (instant)
-webby add ./dashboard --tmp            # scratch folder app, internal
-webby pub ./lissajous --name lissajous # publish a folder app to mini.example.com
-webby deploy --bag public              # re-push the whole public bag
+webby add ./clock.html
+webby serve
+```
+
+That stages `clock.html` in the `local` bag and serves the bag at
+`http://localhost:8765`.
+
+## Bags
+
+Built-in bags:
+
+| bag | provider | reach |
+| --- | --- | --- |
+| `local` | `local` | localhost preview |
+| `tailnet` | `tailscale-serve` | private Tailscale HTTPS |
+| `funnel` | `tailscale-funnel` | temporary public HTTPS |
+| `public` | `cloudflare-pages` | durable public HTTPS |
+
+If `INTERNAL_URL` or `INTERNAL_DIR` is set, webby also adds an `internal` Caddy
+compatibility bag.
+
+## Commands
+
+```sh
+webby add <path> [--name N] [--tmp] [-b BAG]
+webby pub <path> [--name N] [--tmp]
+webby deploy -b BAG
+webby serve [-b BAG] [--port N]
+webby ls [-b BAG]
+webby rm <name> [-b BAG]
+webby open <name> [-b BAG]
+webby domain <hostname> -b BAG
+webby where
+webby init
+```
+
+`webby ls` lists all bags by default. Use `-b` / `--bag` to select one bag.
+
+An app is a folder with `index.html` or a standalone `.html` file. Names that
+start with `tmp` are shown under the Temp section in generated indexes.
+
+## Provider Examples
+
+Tailnet:
+
+```sh
+webby add ./dashboard -b tailnet
+webby deploy -b tailnet
+```
+
+Temporary public Funnel:
+
+```sh
+webby add ./demo -b funnel
+webby deploy -b funnel
+```
+
+Durable public Cloudflare Pages:
+
+```sh
+export CLOUDFLARE_ACCOUNT_ID=...
+export CLOUDFLARE_API_TOKEN=...
+webby pub ./lissajous --name lissajous
 ```
 
 ## Configuration
 
-webby reads everything from the **environment** — nothing is baked into the
-code. Export the keys below, or point `$WEBBY_ENV` at a `KEY=VALUE` file (handy
-with `op inject`/`op run`). When running from a clone, an in-repo `.env.secret`
-(gitignored) is loaded automatically; see `.env.secret.example` for the keys.
-
-- `CF_ACCOUNT_ID` — Cloudflare account that owns the Pages project
-- `CF_TOKEN_REF` — 1Password reference for the API token (needs **Pages: Edit**);
-  read via `op read` at deploy time, never written to disk
-- `INTERNAL_URL`, `PUBLIC_URL` — the domains each bag is served at
-- `INTERNAL_DIR`, `PUBLIC_DIR`, `PUBLIC_PROJECT` — bag paths / Pages project name
+Run:
 
 ```sh
-export CF_ACCOUNT_ID=… CF_TOKEN_REF='op://…' INTERNAL_URL=… PUBLIC_URL=…
-export INTERNAL_DIR=… PUBLIC_DIR=… PUBLIC_PROJECT=webby
-webby where      # prints the resolved bags
+webby init
 ```
 
-## How public hosting works
+This writes `~/.config/webby/config.json`. Override the config path with
+`WEBBY_CONFIG`, and the default bag storage root with `WEBBY_DATA_DIR`.
 
-`mini.example.com` is a **custom domain on a Cloudflare Pages project**, so the
-apps live on Cloudflare's edge — not on the home server (which has no public
-ingress and suspends nightly). `webby deploy` pushes the `public/` directory to
-Pages; Cloudflare serves it globally with automatic TLS.
+Example:
 
-The webby token is Pages-scoped only. Attaching a custom domain also needs a
-DNS record (`CNAME <host> → <project>.pages.dev`, proxied); creating that
-requires a DNS-edit token on the zone, done once per domain.
+```json
+{
+  "defaultBag": "local",
+  "bags": {
+    "local": {
+      "dir": "~/.local/share/webby/local",
+      "host": { "type": "local", "port": 8765 }
+    },
+    "tailnet": {
+      "dir": "~/.local/share/webby/tailnet",
+      "host": { "type": "tailscale-serve", "path": "/", "background": true }
+    },
+    "funnel": {
+      "dir": "~/.local/share/webby/funnel",
+      "host": { "type": "tailscale-funnel", "path": "/", "background": true }
+    },
+    "public": {
+      "dir": "~/.local/share/webby/public",
+      "host": {
+        "type": "cloudflare-pages",
+        "project": "webby",
+        "tokenEnv": "CLOUDFLARE_API_TOKEN"
+      }
+    }
+  }
+}
+```
 
-## Notes
+webby can also load a KEY=VALUE env file from `WEBBY_ENV`; when running from a
+checkout, a local `.env.secret` file is loaded if present.
 
-- Built with Bun + TypeScript. `wrangler` is invoked via `bunx`.
-- The old `html-bag` repo has been merged in: its apps now live in `internal/`
-  and the home Caddy mounts `internal/` (+ `public/`) directly. `/projects/html-bag`
-  is vestigial.
+## Provider Notes
+
+`local` generates an index and can be served with `webby serve`.
+
+`tailscale-serve` and `tailscale-funnel` call the `tailscale` CLI with the bag
+directory as the target.
+
+`cloudflare-pages` calls:
+
+```sh
+wrangler pages deploy <dir> --project-name <project> --branch <branch> --commit-dirty=true
+```
+
+`command` providers run a shell command template. `{dir}`, `{label}`, and
+`{url}` are expanded before execution.
