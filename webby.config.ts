@@ -6,11 +6,24 @@
 // stay in code since they're neither secret nor domain-specific.
 
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+
+// Find .env.secret across both dev and compiled-binary layouts. In a compiled
+// binary `import.meta.dir` is a virtual path, so prefer $WEBBY_ENV, the cwd,
+// and the directory next to the executable before falling back to the repo.
+function findEnvSecret(): string | undefined {
+  const candidates = [
+    process.env.WEBBY_ENV,
+    join(process.cwd(), ".env.secret"),
+    join(dirname(process.execPath), ".env.secret"),
+    join(import.meta.dir, ".env.secret"),
+  ].filter((p): p is string => Boolean(p));
+  return candidates.find((p) => existsSync(p));
+}
 
 function loadEnvSecret() {
-  const file = join(import.meta.dir, ".env.secret");
-  if (!existsSync(file)) return;
+  const file = findEnvSecret();
+  if (!file) return;
   for (const raw of readFileSync(file, "utf8").split("\n")) {
     const line = raw.trim();
     if (!line || line.startsWith("#")) continue;
@@ -29,7 +42,7 @@ loadEnvSecret();
 function req(key: string): string {
   const v = process.env[key];
   if (!v) {
-    console.error(`✗ webby: missing ${key}. Set it in /projects/webby/.env.secret (see .env.secret.example).`);
+    console.error(`✗ webby: missing ${key}. Set it in .env.secret (cwd, next to the binary, or $WEBBY_ENV; see .env.secret.example).`);
     process.exit(1);
   }
   return v;

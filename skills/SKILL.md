@@ -52,5 +52,4 @@ webby domain <host>     # attach a custom domain to the public bag
 ## notes
 
 - secrets/domains live in `.env.secret`, never in code.
-- `op read` pulls the Cloudflare token at deploy time; it never touches disk.
 - bun + typescript; `wrangler` via `bunx`.
