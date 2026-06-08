@@ -83,9 +83,11 @@ async function syncPublicLinks(): Promise<number> {
   if (!internal || !existsSync(pub.dir)) return 0;
   await mkdir(internal.dir, { recursive: true });
   const pubBase = basename(pub.dir);
+  const expected = new Set<string>();
   let n = 0;
   for (const e of await readdir(pub.dir, { withFileTypes: true })) {
     if (e.name.startsWith(".") || e.name === "index.html") continue;
+    expected.add(e.name);
     const link = join(internal.dir, e.name);
     const target = `../${pubBase}/${e.name}`; // sibling dirs → resolves on host and in-container
     // Replace only our own symlinks; never clobber a real internal app of the same name.
@@ -97,6 +99,16 @@ async function syncPublicLinks(): Promise<number> {
     }
     await symlink(target, link);
     n++;
+  }
+  // Drop stale public mirrors while still leaving real internal apps alone.
+  for (const e of await readdir(internal.dir, { withFileTypes: true })) {
+    if (!e.isSymbolicLink() || expected.has(e.name)) continue;
+    const link = join(internal.dir, e.name);
+    const target = await readlink(link).catch(() => "");
+    if (target.startsWith(`../${pubBase}/`)) {
+      await rm(link, { force: true });
+      n++;
+    }
   }
   return n;
 }
@@ -180,6 +192,7 @@ async function cmdDeploy(opts: any) {
 
 async function cmdLs(opts: any) {
   const bag = pickBag(opts);
+  if (bag.label === "internal") await syncPublicLinks();
   const apps = await listApps(bag);
   if (!apps.length) return console.log(`(${bag.label} bag is empty)`);
   console.log(`${bag.label} bag — ${bag.url}`);
