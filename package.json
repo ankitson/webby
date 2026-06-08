@@ -1,16 +1,18 @@
 {
   "name": "webby",
   "version": "0.1.0",
-  "private": true,
-  "description": "Drop a simple HTML app and serve it — internally via Caddy (html-bag) or publicly via Cloudflare Pages.",
+  "description": "Drop a simple static HTML app and serve or publish it to localhost, Tailscale, Cloudflare Pages, or custom hosts.",
   "type": "module",
   "bin": {
     "webby": "./src/cli.ts"
   },
   "scripts": {
+    "check": "tsc --noEmit",
     "webby": "bun run ./src/cli.ts"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "typescript": "^6.0.3",
     "wrangler": "^4.0.0"
   },
   "dependencies": {

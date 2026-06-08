@@ -1,0 +1,5 @@
+{"command":"WEBBY_ENV=/tmp/webby-no-env-does-not-exist WEBBY_DATA_DIR=/tmp/webby-data-test-4 bun run src/cli.ts add /tmp/webby-test.html --name smoke","status":"pass","summary":"staged smoke.html into the zero-config local bag"}
+{"command":"WEBBY_ENV=/tmp/webby-no-env-does-not-exist WEBBY_DATA_DIR=/tmp/webby-data-test-4 bun run src/cli.ts ls","status":"pass","summary":"listed smoke.html from the local bag at http://localhost:8765"}
+{"command":"bun run src/cli.ts ls --public","status":"pass","summary":"listed existing Cloudflare/public bag apps without deploying"}
+{"command":"bun run src/cli.ts where","status":"pass","summary":"resolved local, tailnet, funnel, public, and private internal bags"}
+{"command":"bun run check","status":"pass","summary":"TypeScript check completed with tsc --noEmit"}
