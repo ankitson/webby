@@ -10,6 +10,12 @@ drop an html app, get a url. internal = instant Caddy. public = Cloudflare Pages
 an app is a **folder with `index.html`** or a **standalone `.html` file**.
 name it `tmp*` for throwaway (gitignored, shown under a Temp heading).
 
+## install
+
+```sh
+bun install -g github:ankitson/webby    # webby on PATH (or bunx github:ankitson/webby <cmd>)
+```
+
 ## first: find the bags
 
 paths and urls aren't hardcoded here — ask webby:
@@ -39,6 +45,9 @@ webby deploy --public               # re-push the whole public dir
 
 deploy is just "push the `public/` directory" — nothing more.
 public apps also appear on the internal listing automatically (symlinked).
+
+> **always confirm with the user before a public deploy** (`pub` / `deploy --public`).
+> it publishes to the live internet. internal `add` is safe — deploy is not.
 
 ## the rest
 
