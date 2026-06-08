@@ -1,0 +1,7 @@
+{"command":"bun run src/cli.ts ls","status":"pass","summary":"listed internal and public bag sections by default"}
+{"command":"bun run src/cli.ts ls -b public","status":"pass","summary":"listed only the public bag with the short bag flag"}
+{"command":"bun run src/cli.ts ls --bag internal","status":"pass","summary":"listed only the internal bag with the long bag flag"}
+{"command":"bun run src/cli.ts open lissajous -b public","status":"pass","summary":"resolved a public app URL with the short bag flag without deploying"}
+{"command":"INTERNAL_DIR=/tmp/webby-bag-flag/internal PUBLIC_DIR=/tmp/webby-bag-flag/public INTERNAL_URL=http://internal.example PUBLIC_URL=http://public.example CF_ACCOUNT_ID=dummy CF_TOKEN_REF=dummy bun run src/cli.ts add /tmp/webby-bag-flag/app.html -b public --name bagflag","status":"pass","summary":"staged an app into the public bag with the short bag flag"}
+{"command":"INTERNAL_DIR=/tmp/webby-bag-flag/internal PUBLIC_DIR=/tmp/webby-bag-flag/public INTERNAL_URL=http://internal.example PUBLIC_URL=http://public.example CF_ACCOUNT_ID=dummy CF_TOKEN_REF=dummy bun run src/cli.ts rm bagflag -b public","status":"pass","summary":"removed an app from the public bag with the short bag flag"}
+{"command":"bun run src/cli.ts deploy","status":"pass","summary":"exited nonzero with usage instead of implicitly selecting a bag"}

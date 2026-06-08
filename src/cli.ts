@@ -17,8 +17,8 @@ function die(msg: string): never {
   process.exit(1);
 }
 
-function pickBag(opts: { public?: boolean; bag?: string }): Bag {
-  const label = opts.public ? "public" : opts.bag ?? DEFAULT_BAG;
+function pickBag(opts: { bag?: string }): Bag {
+  const label = opts.bag ?? DEFAULT_BAG;
   const bag = BAGS[label];
   if (!bag) die(`unknown bag '${label}' (have: ${Object.keys(BAGS).join(", ")})`);
   return bag;
@@ -166,7 +166,7 @@ async function deploy(bag: Bag) {
 
 // --- commands -------------------------------------------------------------
 async function cmdAdd(positionals: string[], opts: any) {
-  const path = positionals[0] ?? die("usage: webby add <path> [--name N] [--tmp] [--public]");
+  const path = positionals[0] ?? die("usage: webby add <path> [--name N] [--tmp] [--bag N]");
   const bag = pickBag(opts);
   const res = await stageApp(path, bag, opts);
   console.log(`✓ ${res.name} → ${bag.label} bag`);
@@ -174,7 +174,7 @@ async function cmdAdd(positionals: string[], opts: any) {
     console.log(`  live now: ${res.url}`);
   } else {
     await generateIndex(bag);
-    console.log(`  staged: ${res.url}  (run \`webby deploy --public\` to publish)`);
+    console.log(`  staged: ${res.url}  (run \`webby deploy --bag ${bag.label}\` to publish)`);
   }
 }
 
@@ -187,11 +187,11 @@ async function cmdPub(positionals: string[], opts: any) {
 }
 
 async function cmdDeploy(opts: any) {
-  await deploy(pickBag({ ...opts, public: opts.public ?? opts.bag === undefined }));
+  if (!opts.bag) die("usage: webby deploy --bag <pages-bag>");
+  await deploy(pickBag(opts));
 }
 
-async function cmdLs(opts: any) {
-  const bag = pickBag(opts);
+async function printBagApps(bag: Bag) {
   if (bag.label === "internal") await syncPublicLinks();
   const apps = await listApps(bag);
   if (!apps.length) return console.log(`(${bag.label} bag is empty)`);
@@ -202,8 +202,17 @@ async function cmdLs(opts: any) {
   }
 }
 
+async function cmdLs(opts: any) {
+  if (opts.bag) return printBagApps(pickBag(opts));
+  const bags = Object.values(BAGS);
+  for (let i = 0; i < bags.length; i++) {
+    if (i) console.log("");
+    await printBagApps(bags[i]);
+  }
+}
+
 async function cmdRm(positionals: string[], opts: any) {
-  const name = positionals[0] ?? die("usage: webby rm <name> [--public]");
+  const name = positionals[0] ?? die("usage: webby rm <name> [--bag N]");
   const bag = pickBag(opts);
   const dir = join(bag.dir, name);
   const file = join(bag.dir, name.endsWith(".html") ? name : `${name}.html`);
@@ -218,21 +227,23 @@ async function cmdRm(positionals: string[], opts: any) {
     const linkName = basename(target);
     const link = join(BAGS.internal!.dir, linkName);
     if (existsSync(link) && (await lstat(link)).isSymbolicLink()) await rm(link, { force: true });
-    console.log(`  run \`webby deploy --public\` to update the live site`);
+    console.log(`  run \`webby deploy --bag ${bag.label}\` to update the live site`);
   }
 }
 
 async function cmdOpen(positionals: string[], opts: any) {
-  const name = positionals[0] ?? die("usage: webby open <name> [--public]");
+  const name = positionals[0] ?? die("usage: webby open <name> [--bag N]");
   const bag = pickBag(opts);
   const url = `${bag.url}/${name.replace(/\/$/, "")}${name.endsWith(".html") ? "" : "/"}`;
   console.log(url);
   Bun.spawn(["xdg-open", url], { stdout: "ignore", stderr: "ignore" }).exited.catch(() => {});
 }
 
-async function cmdDomain(positionals: string[]) {
-  const host = positionals[0] ?? die("usage: webby domain <hostname>");
-  const bag = BAGS.public;
+async function cmdDomain(positionals: string[], opts: any) {
+  const host = positionals[0] ?? die("usage: webby domain <hostname> --bag <pages-bag>");
+  if (!opts.bag) die("usage: webby domain <hostname> --bag <pages-bag>");
+  const bag = pickBag(opts);
+  if (bag.backend !== "pages") die(`bag '${bag.label}' is served by ${bag.backend}, cannot attach a Pages domain`);
   const token = await opRead(CF_TOKEN_REF);
   const res = await cf(`/accounts/${ACCOUNT_ID}/pages/projects/${bag.project}/domains`, token, {
     method: "POST",
@@ -254,13 +265,13 @@ function cmdWhere() {
 
 const HELP = `webby — drop a simple HTML app and serve it
 
-  webby add <path> [--name N] [--tmp] [--public]   stage an app into a bag
+  webby add <path> [--name N] [--tmp] [--bag N]    stage an app into a bag
   webby pub <path> [--name N] [--tmp]              add to public bag + deploy
-  webby deploy [--public]                          regenerate index + deploy (pages bags)
-  webby ls   [--public | --bag <name>]             list apps in a bag
-  webby rm   <name> [--public]                     remove an app
-  webby open <name> [--public]                     print/open an app URL
-  webby domain <hostname>                          attach a custom domain to the public bag
+  webby deploy --bag <name>                        regenerate index + deploy (pages bags)
+  webby ls   [--bag <name>]                        list apps in all bags, or one bag
+  webby rm   <name> [--bag N]                      remove an app
+  webby open <name> [--bag N]                      print/open an app URL
+  webby domain <hostname> --bag <pages-bag>        attach a custom domain to a Pages bag
   webby where                                      print bag directories + URLs
 
 Bags: ${Object.values(BAGS).map((b) => `${b.label} (${b.backend} → ${b.url})`).join(", ")}
@@ -273,8 +284,7 @@ async function main() {
     options: {
       name: { type: "string" },
       tmp: { type: "boolean", default: false },
-      public: { type: "boolean", short: "p", default: false },
-      bag: { type: "string" },
+      bag: { type: "string", short: "b" },
       help: { type: "boolean", short: "h", default: false },
     },
   });
@@ -289,7 +299,7 @@ async function main() {
     case "ls": case "list": return cmdLs(values);
     case "rm": case "remove": return cmdRm(rest, values);
     case "open": return cmdOpen(rest, values);
-    case "domain": return cmdDomain(rest);
+    case "domain": return cmdDomain(rest, values);
     case "where": case "paths": return cmdWhere();
     default: die(`unknown command '${cmd}'\n\n${HELP}`);
   }

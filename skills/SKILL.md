@@ -40,22 +40,23 @@ caddy serves it the moment it lands. no build, no deploy.
 
 ```sh
 webby pub ./vancouver-tides         # stage in public/ + deploy
-webby deploy --public               # re-push the whole public dir
+webby deploy --bag public           # re-push the whole public dir
 ```
 
 deploy is just "push the `public/` directory" — nothing more.
 public apps also appear on the internal listing automatically (symlinked).
 
-> **always confirm with the user before a public deploy** (`pub` / `deploy --public`).
+> **always confirm with the user before a public deploy** (`pub` / `deploy --bag public`).
 > it publishes to the live internet. internal `add` is safe — deploy is not.
 
 ## the rest
 
 ```sh
-webby ls                # list a bag (add --public for the public one)
+webby ls                # list all bags
+webby ls -b public      # list one bag
 webby open <name>       # print/open the url
-webby rm <name>         # remove (add --public for public)
-webby domain <host>     # attach a custom domain to the public bag
+webby rm <name> -b public
+webby domain <host> -b public
 ```
 
 ## notes

@@ -12,17 +12,17 @@ add path *flags:
 pub path *flags:
     bun run src/cli.ts pub {{path}} {{flags}}
 
-# Regenerate the public index and deploy.
-deploy:
-    bun run src/cli.ts deploy --public
+# Regenerate an index and deploy a Pages bag. Pass flags after `--`, e.g. `-- --bag public`.
+deploy *flags:
+    bun run src/cli.ts deploy {{flags}}
 
-# List apps in a bag (default internal; pass `-- --public`).
+# List all bags, or pass `-- --bag <name>` / `-- -b <name>`.
 ls *flags:
     bun run src/cli.ts ls {{flags}}
 
-# Attach a custom domain to the public Pages bag.
-domain host:
-    bun run src/cli.ts domain {{host}}
+# Attach a custom domain to a Pages bag. Pass `-- -b public`.
+domain host *flags:
+    bun run src/cli.ts domain {{host}} {{flags}}
 
 # Build a React/JSX internal app into a self-contained bundle.js.
 build name:

@@ -30,13 +30,13 @@ Configure it from the environment (see [Configuration](#configuration)), then:
 ## Usage
 
 ```sh
-webby add <path> [--name N] [--tmp] [--public]   # stage an app into a bag
+webby add <path> [--name N] [--tmp] [--bag N]    # stage an app into a bag
 webby pub <path> [--name N] [--tmp]              # add to public bag + deploy
-webby deploy [--public]                          # regenerate index + deploy (pages bags)
-webby ls   [--public | --bag <name>]             # list apps in a bag
-webby rm   <name> [--public]                     # remove an app
-webby open <name> [--public]                     # print/open an app URL
-webby domain <hostname>                          # attach a custom domain to the public bag
+webby deploy --bag <name>                        # regenerate index + deploy (pages bags)
+webby ls   [--bag <name>]                        # list all bags, or one bag
+webby rm   <name> [--bag N]                      # remove an app
+webby open <name> [--bag N]                      # print/open an app URL
+webby domain <hostname> --bag <pages-bag>        # attach a custom domain
 ```
 
 - **Internal** is a plain file copy into the `internal/` dir — live immediately
@@ -54,7 +54,7 @@ webby domain <hostname>                          # attach a custom domain to the
 webby add ./clock.html                 # → tools.home.example.com/clock.html (instant)
 webby add ./dashboard --tmp            # scratch folder app, internal
 webby pub ./lissajous --name lissajous # publish a folder app to mini.example.com
-webby deploy --public                  # re-push the whole public bag
+webby deploy --bag public              # re-push the whole public bag
 ```
 
 ## Configuration
