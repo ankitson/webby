@@ -12,5 +12,10 @@
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "react": "^19",
+    "react-dom": "^19",
+    "recharts": "^2"
   }
 }

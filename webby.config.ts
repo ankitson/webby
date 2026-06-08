@@ -56,7 +56,7 @@ export const CF_TOKEN_REF = req("CF_TOKEN_REF");
 export const BAGS: Record<string, Bag> = {
   internal: {
     label: "internal",
-    dir: process.env.INTERNAL_DIR ?? "/projects/html-bag/app",
+    dir: process.env.INTERNAL_DIR ?? join(import.meta.dir, "internal"),
     url: req("INTERNAL_URL"),
     backend: "caddy",
   },

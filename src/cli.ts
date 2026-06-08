@@ -4,7 +4,7 @@
 // Domains, account id, and the token reference come from .env.secret.
 
 import { parseArgs } from "node:util";
-import { stat, cp, mkdir, rm, readdir, writeFile } from "node:fs/promises";
+import { stat, lstat, cp, mkdir, rm, readdir, writeFile, symlink, readlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { basename, extname, join, resolve } from "node:path";
 import { BAGS, DEFAULT_BAG, ACCOUNT_ID, CF_TOKEN_REF, type Bag } from "../webby.config.ts";
@@ -61,14 +61,44 @@ async function listApps(bag: Bag): Promise<AppEntry[]> {
   const apps: AppEntry[] = [];
   for (const e of entries) {
     if (e.name.startsWith(".")) continue;
-    if (e.isDirectory()) {
+    // Symlinks (public apps linked into the internal bag) resolve to their target.
+    const isDir = e.isSymbolicLink()
+      ? await stat(join(bag.dir, e.name)).then((s) => s.isDirectory()).catch(() => false)
+      : e.isDirectory();
+    if (isDir) {
       apps.push({ name: e.name, isDir: true, href: `./${e.name}/`, tmp: e.name.startsWith("tmp") });
-    } else if (e.isFile() && e.name.toLowerCase().endsWith(".html") && e.name !== "index.html") {
+    } else if (e.name.toLowerCase().endsWith(".html") && e.name !== "index.html") {
       const base = e.name.replace(/\.html$/i, "");
       apps.push({ name: base, isDir: false, href: `./${e.name}`, tmp: base.startsWith("tmp") });
     }
   }
   return apps.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// Mirror every public app into the internal bag as a relative symlink, so the
+// Caddy tools listing shows public apps alongside internal ones. The public
+// dir stays the single source of truth — deploy still just pushes public/.
+async function syncPublicLinks(): Promise<number> {
+  const pub = BAGS.public, internal = BAGS.internal;
+  if (!internal || !existsSync(pub.dir)) return 0;
+  await mkdir(internal.dir, { recursive: true });
+  const pubBase = basename(pub.dir);
+  let n = 0;
+  for (const e of await readdir(pub.dir, { withFileTypes: true })) {
+    if (e.name.startsWith(".") || e.name === "index.html") continue;
+    const link = join(internal.dir, e.name);
+    const target = `../${pubBase}/${e.name}`; // sibling dirs → resolves on host and in-container
+    // Replace only our own symlinks; never clobber a real internal app of the same name.
+    if (existsSync(link)) {
+      const isLink = await lstat(link).then((s) => s.isSymbolicLink()).catch(() => false);
+      if (!isLink) continue;
+      if ((await readlink(link).catch(() => "")) === target) continue;
+      await rm(link, { force: true });
+    }
+    await symlink(target, link);
+    n++;
+  }
+  return n;
 }
 
 // --- secrets / cloudflare -------------------------------------------------
@@ -109,6 +139,8 @@ async function generateIndex(bag: Bag): Promise<AppEntry[]> {
 
 async function deploy(bag: Bag) {
   if (bag.backend !== "pages") die(`bag '${bag.label}' is served by ${bag.backend}, nothing to deploy`);
+  const linked = await syncPublicLinks();
+  if (linked) console.log(`  linked ${linked} public app(s) into the internal bag`);
   const apps = await generateIndex(bag);
   const token = await opRead(CF_TOKEN_REF);
   await ensureProject(bag.project!, token);
@@ -169,7 +201,13 @@ async function cmdRm(positionals: string[], opts: any) {
   else die(`no app named '${name}' in ${bag.label} bag`);
   await rm(target, { recursive: true, force: true });
   console.log(`✓ removed ${name} from ${bag.label} bag`);
-  if (bag.backend === "pages") console.log(`  run \`webby deploy --public\` to update the live site`);
+  if (bag.backend === "pages") {
+    // Drop the symlink we mirrored into the internal bag, if any.
+    const linkName = basename(target);
+    const link = join(BAGS.internal!.dir, linkName);
+    if (existsSync(link) && (await lstat(link)).isSymbolicLink()) await rm(link, { force: true });
+    console.log(`  run \`webby deploy --public\` to update the live site`);
+  }
 }
 
 async function cmdOpen(positionals: string[], opts: any) {
@@ -192,6 +230,16 @@ async function cmdDomain(positionals: string[]) {
   console.log(`✓ attached ${host} to Pages project '${bag.project}' (cert/DNS provisioning by Cloudflare)`);
 }
 
+function cmdWhere() {
+  console.log("webby bags — drop an app into one of these dirs:\n");
+  for (const bag of Object.values(BAGS)) {
+    console.log(`  ${bag.label.padEnd(9)} ${bag.dir}`);
+    console.log(`  ${" ".repeat(9)} → ${bag.url}  (${bag.backend}${bag.project ? `: ${bag.project}` : ""})`);
+  }
+  console.log(`\n  default bag: ${DEFAULT_BAG}`);
+  console.log(`  public apps are mirrored into the internal bag as symlinks (the internal listing shows both).`);
+}
+
 const HELP = `webby — drop a simple HTML app and serve it
 
   webby add <path> [--name N] [--tmp] [--public]   stage an app into a bag
@@ -201,6 +249,7 @@ const HELP = `webby — drop a simple HTML app and serve it
   webby rm   <name> [--public]                     remove an app
   webby open <name> [--public]                     print/open an app URL
   webby domain <hostname>                          attach a custom domain to the public bag
+  webby where                                      print bag directories + URLs
 
 Bags: ${Object.values(BAGS).map((b) => `${b.label} (${b.backend} → ${b.url})`).join(", ")}
 Default bag: ${DEFAULT_BAG}. <path> is a .html file or a directory with index.html.`;
@@ -229,6 +278,7 @@ async function main() {
     case "rm": case "remove": return cmdRm(rest, values);
     case "open": return cmdOpen(rest, values);
     case "domain": return cmdDomain(rest);
+    case "where": case "paths": return cmdWhere();
     default: die(`unknown command '${cmd}'\n\n${HELP}`);
   }
 }

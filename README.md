@@ -26,10 +26,14 @@ webby open <name> [--public]                     # print/open an app URL
 webby domain <hostname>                          # attach a custom domain to the public bag
 ```
 
-- **Internal** is a plain file copy into the html-bag `app/` dir — live
-  immediately via Caddy's live mount, no deploy step.
-- **Public** copies into `public/`, regenerates a static browse `index.html`
-  (same look as html-bag's listing), and runs `wrangler pages deploy`.
+- **Internal** is a plain file copy into the `internal/` dir — live immediately
+  via Caddy's live mount, no deploy step.
+- **Public** copies into `public/`, regenerates a static browse `index.html`,
+  and runs `wrangler pages deploy public/` — deploy is just "push the directory".
+- The internal listing shows **both** bags: every public app is mirrored into
+  `internal/` as a relative symlink (`../public/<app>`), so the tools host lists
+  internal + public apps in one flat page. `public/` stays the single source of
+  truth; the symlinks are maintained automatically on `pub` / `deploy`.
 
 ### Examples
 
@@ -65,5 +69,6 @@ requires a DNS-edit token on the zone, done once per domain.
 ## Notes
 
 - Built with Bun + TypeScript. `wrangler` is invoked via `bunx`.
-- This lives in `/projects/webby` for now; it can be merged into html-bag later
-  (the `internal` bag already points at the html-bag `app/` directory).
+- The old `html-bag` repo has been merged in: its apps now live in `internal/`
+  and the home Caddy mounts `internal/` (+ `public/`) directly. `/projects/html-bag`
+  is vestigial.

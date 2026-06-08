@@ -23,3 +23,18 @@ ls *flags:
 # Attach a custom domain to the public Pages bag.
 domain host:
     bun run src/cli.ts domain {{host}}
+
+# Build a React/JSX internal app into a self-contained bundle.js.
+build name:
+    bun build internal/{{name}}/app.jsx --bundle --outfile internal/{{name}}/bundle.js
+
+# Build all internal JSX apps that have an app.jsx.
+build-all:
+    #!/usr/bin/env bash
+    for dir in internal/*/; do
+      if [ -f "${dir}app.jsx" ]; then
+        name="$(basename "${dir}")"
+        echo "Building ${name}..."
+        bun build "${dir}app.jsx" --bundle --outfile "${dir}bundle.js"
+      fi
+    done

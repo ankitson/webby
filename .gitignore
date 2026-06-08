@@ -8,5 +8,9 @@ node_modules/
 # Generated browse listing for the public bag (rebuilt on every deploy).
 public/index.html
 
-# Scratch apps in any bag are never committed (matches html-bag's tmp* rule).
+# Scratch apps in any bag are never committed (tmp* rule, both bags).
 public/tmp*
+internal/tmp*
+
+# internal apps are not committed
+internal/
