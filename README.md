@@ -14,6 +14,19 @@ An "app" is either a **folder with `index.html`** (plus assets) or a
 **standalone `.html` file**. Anything whose name starts with `tmp` is treated
 as scratch: shown under a separate *Temp* heading and gitignored.
 
+## Install
+
+webby is a [Bun](https://bun.sh) CLI (it uses Bun APIs, so it needs `bun` — not
+`node`/`npx`). There's no binary to download; install straight from the repo:
+
+```sh
+bun install -g github:ankitson/webby     # puts `webby` on your PATH
+# one-off, no install (the bunx / npx equivalent):
+bunx github:ankitson/webby where
+```
+
+Configure it from the environment (see [Configuration](#configuration)), then:
+
 ## Usage
 
 ```sh
@@ -46,14 +59,22 @@ webby deploy --public                  # re-push the whole public bag
 
 ## Configuration
 
-Secrets and environment live in **`.env.secret`** (gitignored) — never in code.
-Copy `.env.secret.example` to `.env.secret` and fill in:
+webby reads everything from the **environment** — nothing is baked into the
+code. Export the keys below, or point `$WEBBY_ENV` at a `KEY=VALUE` file (handy
+with `op inject`/`op run`). When running from a clone, an in-repo `.env.secret`
+(gitignored) is loaded automatically; see `.env.secret.example` for the keys.
 
 - `CF_ACCOUNT_ID` — Cloudflare account that owns the Pages project
 - `CF_TOKEN_REF` — 1Password reference for the API token (needs **Pages: Edit**);
   read via `op read` at deploy time, never written to disk
 - `INTERNAL_URL`, `PUBLIC_URL` — the domains each bag is served at
-- `INTERNAL_DIR`, `PUBLIC_DIR`, `PUBLIC_PROJECT` — optional path/project overrides
+- `INTERNAL_DIR`, `PUBLIC_DIR`, `PUBLIC_PROJECT` — bag paths / Pages project name
+
+```sh
+export CF_ACCOUNT_ID=… CF_TOKEN_REF='op://…' INTERNAL_URL=… PUBLIC_URL=…
+export INTERNAL_DIR=… PUBLIC_DIR=… PUBLIC_PROJECT=webby
+webby where      # prints the resolved bags
+```
 
 ## How public hosting works
 

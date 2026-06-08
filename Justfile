@@ -39,23 +39,11 @@ build-all:
       fi
     done
 
-# Compile a standalone webby binary for each target into dist/.
-binaries:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    mkdir -p dist && rm -f dist/webby-*
-    targets="bun-linux-x64:linux-x64 bun-linux-arm64:linux-arm64 bun-darwin-arm64:darwin-arm64 bun-darwin-x64:darwin-x64"
-    for t in $targets; do
-      bunt="${t%%:*}"; name="${t##*:}"
-      echo "compiling webby-${name}…"
-      bun build src/cli.ts --compile --minify --target="${bunt}" --outfile "dist/webby-${name}"
-    done
-    ls -lh dist/
+# Install webby on PATH from this checkout (tracks local edits).
+install:
+    bun link
 
-# Cut a GitHub release (tag vX.Y.Z) and upload the dist/ binaries.
-release version:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    just binaries
-    gh release create "{{version}}" dist/webby-* --title "webby {{version}}" \
-      --notes "Standalone webby CLI. Download your platform's binary, \`chmod +x\`, and put it on PATH. Needs a .env.secret next to the binary (or \$WEBBY_ENV) — see .env.secret.example."
+# Print the install one-liners for others.
+distribute:
+    @echo "bun install -g github:ankitson/webby   # persistent"
+    @echo "bunx github:ankitson/webby <cmd>       # one-off (npx-style)"
