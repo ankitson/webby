@@ -132,8 +132,7 @@ async function ensureProject(project: string, token: string) {
 
 async function generateIndex(bag: Bag): Promise<AppEntry[]> {
   const apps = await listApps(bag);
-  const host = new URL(bag.url).host;
-  await writeFile(join(bag.dir, "index.html"), renderIndex({ apps, title: "webby", subtitle: host }));
+  await writeFile(join(bag.dir, "index.html"), renderIndex({ apps, title: "webby" }));
   return apps;
 }
 
