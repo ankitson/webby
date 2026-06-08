@@ -10,10 +10,10 @@ drop an html app, get a url. internal = instant Caddy. public = Cloudflare Pages
 an app is a **folder with `index.html`** or a **standalone `.html` file**.
 name it `tmp*` for throwaway (gitignored, shown under a Temp heading).
 
-## install
+## run it
 
 ```sh
-bun install -g github:ankitson/webby    # webby on PATH (or bunx github:ankitson/webby <cmd>)
+bunx github:ankitson/webby <cmd>    # e.g. bunx github:ankitson/webby where
 ```
 
 ## first: find the bags
