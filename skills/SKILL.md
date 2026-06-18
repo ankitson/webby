@@ -84,6 +84,7 @@ webby add <path> [-b bag] [--name name] [--tmp]
 webby rm <name> [-b bag]
 webby open <name> [-b bag]
 webby domain <host> -b public
+webby preview -b <bag> [--force]
 webby init
 ```
 
@@ -91,4 +92,5 @@ webby init
 
 - Rust CLI; use `cargo install --path .` locally.
 - `-b` / `--bag` is the only bag selector. There is no `--public` flag.
+- `webby preview` captures static JPEG card previews into `.webby-previews/`.
 - `command` providers can use `{dir}`, `{label}`, and `{url}` template values.

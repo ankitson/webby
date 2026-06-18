@@ -1,3 +1,81 @@
+## 2026-06-18 — Commit Prep
+
+Goal: verify the current preview-template work and make the Cloudflare fallback commit-ready.
+
+Change:
+- Hardened the Cloudflare Pages deploy fallback from `npx wrangler` to `npx --yes wrangler`.
+- Added an integration test that removes `wrangler` from `PATH` and verifies the `npx` invocation.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`
+- `git diff --check`
+
+## 2026-06-11 — Lightweight Preview Tiles
+
+Goal: remove lag from the generated index without going back to a plain text directory.
+
+Decision:
+- Stop using live iframes as tile backgrounds. They load and execute every app on the index page, which is too expensive for a launcher.
+- Use deterministic CSS preview art from each app name instead. The tile still has visual identity, but it does not fetch or run the target app until clicked.
+- Keep hover/focus effects transform-only and add reduced-motion handling.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`
+
+## 2026-06-11 — Hover Performance Trim
+
+Goal: explain and reduce the remaining mouseover lag on large generated index tiles.
+
+Discovery:
+- The Firefox profile `Firefox 2026-06-11 10.49 profile.json.gz` showed the current root page spending time in `Coalesced input move flusher [Event]` markers, with long stalls around 171-275ms.
+- The same root page had 129 CSS transition markers, including non-compositor `border-*-color` transitions on `.site` and label spans.
+- The profile also still contained an earlier root page with iframe child windows, confirming that hard refresh matters after regenerating `browse.html`, but the remaining hover jank was from CSS transitions on the lightweight page.
+
+Change:
+- Stopped animating large tile surfaces and preview pseudo-elements.
+- Removed animated shadow, opacity, background-color, and border-color changes from tile hover.
+- Kept only the small label transform and added tile paint/layout containment.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`
+- Reinstalled `webby` and regenerated `internal/browse.html` plus the local index.
+
+## 2026-06-11 — Static Screenshot Previews
+
+Goal: restore real visual previews without iframe runtime cost.
+
+Decision:
+- Add `webby preview -b <bag>` to capture static JPEG previews into `.webby-previews/`.
+- Cards reference `.webby-previews/<app>.jpg` as their first background layer and retain the gradient as a fallback.
+- Capture app files directly via `file://` instead of the internal HTTPS URL. Chrome headless repeatedly timed out or captured blank pages against `tools.home.ankitson.com`, while file captures produced real screenshots.
+- Use Chrome's native `--screenshot` path with a bounded per-page timeout. CDP `Page.captureScreenshot` repeatedly hung in this environment.
+
+Results:
+- Captured 8 of 9 internal app previews. `sleep-tracker` still times out under headless Chrome and falls back to the gradient tile.
+- Deployed regenerated `internal/browse.html`; Caddy serves the preview JPEGs from `/.webby-previews/`.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`
+- `webby deploy -b internal`
+- `webby deploy -b local`
+
+## 2026-06-10 — Preview Tile Index
+
+Goal: make the generated webby index feel like a dense app launcher instead of a text-heavy directory.
+
+Change:
+- Removed the visible `webby` hero, index count, item numbering, and `tool` / `page` labels.
+- Replaced list cards with responsive preview tiles that use each app URL in a lazy iframe background.
+- Added hover and keyboard-focus animation while keeping the tile label compact and readable on mobile.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`
+
 ## 2026-06-08 — Refresh Public Mirrors on List
 
 Goal: fix `webby ls` on `main` when the internal bag is missing public symlinks.

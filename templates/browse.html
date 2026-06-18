@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tools</title>
+  <style>
+{% include "style.css" %}
+  </style>
+</head>
+<body>
+<main>
+  <h1 class="sr-only">tools</h1>
+  <nav class="bag-nav">
+    <a href="https://mini.ankitson.com">public</a>
+    <a href="https://tools.home.ankitson.com">internal</a>
+  </nav>
+  <section class="grid" id="tools-grid" aria-label="Sites"></section>
+  <section class="grid scratch" id="temp-grid" aria-label="Scratch sites" hidden></section>
+  <template id="items">{% raw %}{{range .Items}}<article data-name="{{html .Name}}" data-isdir="{{.IsDir}}" data-url="{{html .URL}}"></article>{{end}}{% endraw %}</template>
+  <script>
+(function () {
+  function hueFor(value) {
+    var hash = 0;
+    for (var i = 0; i < value.length; i++) {
+      hash = ((hash * 31) + value.charCodeAt(i)) >>> 0;
+    }
+    return hash % 360;
+  }
+
+  function previewSlug(value) {
+    return value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  var tpl = document.getElementById('items').content;
+  var toolsGrid = document.getElementById('tools-grid');
+  var tempGrid = document.getElementById('temp-grid');
+  for (var el of tpl.querySelectorAll('article')) {
+    var raw = el.dataset.name;
+    var isDir = el.dataset.isdir === 'true';
+    var url = el.dataset.url;
+    if (/^\./.test(raw)) continue;
+    if (!isDir && !/\.html$/i.test(raw)) continue;
+    var clean = raw.replace(/\/$/, '').replace(/\.html$/i, '');
+    if (clean === 'index' || clean === 'browse') continue;
+    var isTmp = /^tmp[-_]?/.test(clean);
+    var display = isTmp ? (clean.replace(/^tmp[-_]?/, '') || clean) : clean;
+    var hue = hueFor(clean);
+    var preview = document.createElement('div');
+    preview.className = 'preview';
+    preview.setAttribute('aria-hidden', 'true');
+    var span = document.createElement('span');
+    span.textContent = display;
+    var link = document.createElement('a');
+    link.className = 'site-link';
+    link.href = url;
+    link.appendChild(span);
+    var tile = document.createElement('article');
+    tile.className = 'site';
+    tile.style.setProperty('--tile-hue', hue);
+    tile.style.setProperty('--tile-shift', (hue + 72) % 360);
+    tile.style.setProperty('--preview-image', "url('/.webby-previews/" + previewSlug(clean) + ".jpg')");
+    tile.appendChild(preview);
+    tile.appendChild(link);
+    (isTmp ? tempGrid : toolsGrid).appendChild(tile);
+  }
+  if (tempGrid.children.length) tempGrid.hidden = false;
+})();
+  </script>
+</main>
+</body>
+</html>

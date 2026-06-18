@@ -114,7 +114,7 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
         "{}",
         String::from_utf8_lossy(&caddy_out.stderr)
     );
-    assert!(caddy.join("index.html").exists());
+    assert!(caddy.join("browse.html").exists());
     assert!(String::from_utf8_lossy(&caddy_out.stdout).contains("https://caddy.example"));
 }
 
@@ -246,6 +246,64 @@ exit 0
         public.display()
     )));
     assert!(log.contains("account=acct_123 token=secret-token"));
+}
+
+#[test]
+fn deploy_cloudflare_pages_uses_npx_fallback_when_wrangler_is_missing() {
+    let tmp = TestDir::new("cloudflare-npx");
+    let bin_dir = tmp.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let capture = tmp.path().join("npx.log");
+    fake_exe(
+        &bin_dir,
+        "npx",
+        r#"#!/bin/sh
+echo "npx $*" >> "$WEBBY_CAPTURE"
+exit 0
+"#,
+    );
+
+    let public = tmp.path().join("public");
+    write_app(&public);
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "bags": {{
+                "public": {{
+                  "dir": "{}",
+                  "host": {{
+                    "type": "cloudflare-pages",
+                    "url": "https://public.example",
+                    "project": "mini",
+                    "tokenEnv": "WEBBY_TEST_CF_TOKEN"
+                  }}
+                }}
+              }}
+            }}"#,
+            public.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .env("PATH", bin_dir)
+        .env("WEBBY_CAPTURE", &capture)
+        .env("WEBBY_TEST_CF_TOKEN", "secret-token")
+        .args(["deploy", "-b", "public"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(public.join("index.html").exists());
+
+    let log = fs::read_to_string(capture).unwrap();
+    assert!(log.contains(&format!(
+        "npx --yes wrangler pages deploy {} --project-name mini --branch main --commit-dirty=true",
+        public.display()
+    )));
 }
 
 #[test]

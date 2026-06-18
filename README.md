@@ -50,6 +50,7 @@ compatibility bag.
 webby add <path> [--name N] [--tmp] [-b BAG]
 webby pub <path> [--name N] [--tmp]
 webby deploy -b BAG
+webby preview -b BAG [--force]
 webby serve [-b BAG] [--port N]
 webby ls [-b BAG]
 webby rm <name> [-b BAG]
@@ -63,6 +64,11 @@ webby init
 
 An app is a folder with `index.html` or a standalone `.html` file. Names that
 start with `tmp` are shown under the Temp section in generated indexes.
+
+`webby preview -b BAG` captures static JPEG card previews into the bag's
+`.webby-previews/` directory. It uses Chrome/Chromium if available, skips
+existing previews unless `--force` is passed, and keeps generated indexes fast
+by serving images instead of live iframes.
 
 ## Provider Examples
 

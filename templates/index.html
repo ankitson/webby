@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <style>
+{% include "style.css" %}
+  </style>
+</head>
+<body>
+<main>
+  <h1 class="sr-only">{{ title }}</h1>
+  <nav class="bag-nav">
+    <a href="https://mini.ankitson.com">public</a>
+    <a href="https://tools.home.ankitson.com">internal</a>
+  </nav>
+  <section class="grid" aria-label="Sites">
+    {% if items %}{{ items | safe }}{% else %}<p class="empty">Nothing here yet.</p>{% endif %}
+  </section>
+  {% if scratch_items %}
+  <section class="grid scratch" aria-label="Scratch sites">
+    {{ scratch_items | safe }}
+  </section>
+  {% endif %}
+</main>
+</body>
+</html>

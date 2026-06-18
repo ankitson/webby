@@ -53,6 +53,7 @@ pub fn deploy_bag(bag: &Bag, port_override: Option<u16>) -> Result<()> {
             Ok(())
         }
         Host::Caddy { .. } => {
+            println!("✓ generated: {}/browse.html", bag.dir.display());
             println!("✓ live: {}", base_url(bag, None));
             Ok(())
         }
@@ -226,8 +227,7 @@ fn run_cloudflare_pages(
 
     println!("  deploying {app_count} app(s) to Pages project '{project}'...");
     let dir = bag.dir.to_string_lossy().to_string();
-    run_command(
-        "wrangler",
+    run_wrangler(
         &[
             "pages",
             "deploy",
@@ -271,6 +271,24 @@ fn read_cloudflare_token(
         ));
     }
     Ok(None)
+}
+
+fn in_path(name: &str) -> bool {
+    std::env::var_os("PATH")
+        .map(|paths| std::env::split_paths(&paths).any(|p| p.join(name).is_file()))
+        .unwrap_or(false)
+}
+
+fn run_wrangler(args: &[&str], envs: &[(String, String)]) -> Result<()> {
+    if in_path("wrangler") {
+        run_command("wrangler", args, envs)
+    } else {
+        let full: Vec<&str> = ["--yes", "wrangler"]
+            .into_iter()
+            .chain(args.iter().copied())
+            .collect();
+        run_command("npx", &full, envs)
+    }
 }
 
 fn run_command(program: &str, args: &[&str], envs: &[(String, String)]) -> Result<()> {

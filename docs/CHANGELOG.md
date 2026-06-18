@@ -1,3 +1,64 @@
+## 2026-06-18
+
+### Cloudflare Wrangler Fallback
+
+Modified:
+- Cloudflare Pages deploys now fall back to `npx --yes wrangler` when a `wrangler` binary is not already on `PATH`.
+
+Added:
+- Integration coverage for the `npx` fallback path.
+
+Why:
+- The fallback should be non-interactive and test-covered so deploys do not hang waiting for an install prompt.
+
+## 2026-06-11
+
+### Static Screenshot Previews
+
+Added:
+- `webby preview -b <bag>` captures static JPEG card previews into `.webby-previews/`.
+- `just preview-internal` runs the preview capture for the internal Caddy bag.
+
+Modified:
+- Generated cards use `.webby-previews/<app>.jpg` as a background image over the existing gradient fallback.
+- Caddy browse rendering skips dot-directories like `.webby-previews/`.
+- Preview capture loads app files directly with Chrome's native screenshot mode and a bounded timeout.
+
+Why:
+- Real screenshots give the visual signal the iframe version had, without loading every app inside the index at runtime.
+
+### Hover Performance Trim
+
+Modified:
+- Removed large-surface hover transitions from generated tiles: card transform, preview pseudo-element transforms, overlay opacity animation, background-color animation, shadow animation, and border-color animation.
+- Added paint/layout containment to each tile.
+- Kept only the small label lift as an animated hover effect.
+
+Why:
+- A Firefox profile showed hover jank dominated by `Coalesced input move flusher` stalls and many CSS transition markers, including non-compositor border-color transitions on large cards.
+
+### Lightweight Preview Tiles
+
+Modified:
+- Replaced iframe-backed index previews with CSS-only visual previews keyed from app names.
+- Updated the Caddy browse template to build the same lightweight tiles without loading each app in an iframe.
+- Reduced hover work to small transform and opacity changes, with reduced-motion support.
+
+Why:
+- Live iframe previews made the index laggy by loading every hosted app inside the launcher. Static CSS previews keep visual variety while making the UI much snappier.
+
+## 2026-06-10
+
+### Preview Tile Index
+
+Modified:
+- Reworked generated bag indexes into a full-width responsive grid of preview-backed site tiles.
+- Removed visible index header text, entry counts, numbering, and app type labels from the generated listing.
+- Added hover and focus animation for preview tiles.
+
+Why:
+- The index should act as a compact launcher for hosted apps, with the apps themselves as the primary visual signal.
+
 ## 2026-06-08
 
 ### Internal Listing Public Mirrors
