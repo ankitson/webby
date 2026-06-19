@@ -1,3 +1,21 @@
+## 2026-06-18 — Shot-Scraper Preview Backend
+
+Goal: make page preview capture reliable for static documentation sites.
+
+Discovery:
+- Raw `google-chrome --headless=new --screenshot` repeatedly timed out on `internal/jobsearch-docs/index.html`, including with a 60 second Chrome timeout.
+- The same page captured correctly through DevTools and through `uvx shot-scraper` in about one second.
+
+Change:
+- Replaced the direct Chrome process backend with `uvx shot-scraper`.
+- Added a 2000ms pre-capture wait to let app fonts and first render settle.
+- Added an optional app argument so one preview can be regenerated without recapturing the whole bag.
+- Added a preview integration test using a fake `uvx` command.
+
+Verification:
+- `just check`
+- `cargo run -- preview -b internal --force --timeout-secs 15`
+
 ## 2026-06-18 — Commit Prep
 
 Goal: verify the current preview-template work and make the Cloudflare fallback commit-ready.

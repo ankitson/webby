@@ -1,9 +1,8 @@
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::thread;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::process::Command;
+use std::time::Duration;
 
 use crate::app::{list_apps, AppEntry};
 use crate::config::Bag;
@@ -15,8 +14,15 @@ pub fn capture_previews(
     width: u32,
     height: u32,
     timeout: Duration,
+    app_filter: Option<&str>,
 ) -> Result<()> {
-    let apps = list_apps(bag)?;
+    let mut apps = list_apps(bag)?;
+    if let Some(name) = app_filter {
+        apps = filter_apps(apps, name);
+        if apps.is_empty() {
+            return Err(err(format!("no app named '{name}' in {} bag", bag.label)));
+        }
+    }
     if apps.is_empty() {
         println!("✓ no apps in {}", bag.dir.display());
         return Ok(());
@@ -25,9 +31,9 @@ pub fn capture_previews(
     let out_dir = bag.dir.join(".webby-previews");
     fs::create_dir_all(&out_dir)?;
 
-    let chrome = chrome_binary()?;
     let mut captured = 0usize;
     let mut skipped = 0usize;
+    let mut failed = 0usize;
 
     for app in apps {
         let out = out_dir.join(format!("{}.jpg", preview_slug(&app.name)));
@@ -37,15 +43,16 @@ pub fn capture_previews(
             continue;
         }
 
-        let url = capture_url(bag, &app);
+        let path = capture_path(bag, &app);
         print!("capture {} ... ", app.name);
         let _ = std::io::stdout().flush();
-        match capture_with_chrome(&chrome, &url, &out, width, height, timeout) {
+        match capture_with_shot_scraper(&path, &out, width, height, timeout) {
             Ok(()) => {
                 captured += 1;
                 println!("{}", out.display());
             }
             Err(error) => {
+                failed += 1;
                 println!("failed");
                 eprintln!("  ! {}: {}", app.name, error);
             }
@@ -53,12 +60,27 @@ pub fn capture_previews(
     }
 
     println!(
-        "✓ previews: {} captured, {} skipped in {}",
+        "✓ previews: {} captured, {} skipped, {} failed in {}",
         captured,
         skipped,
+        failed,
         out_dir.display()
     );
     Ok(())
+}
+
+fn filter_apps(apps: Vec<AppEntry>, name: &str) -> Vec<AppEntry> {
+    let clean = clean_app_name(name);
+    apps.into_iter()
+        .filter(|app| clean_app_name(&app.name) == clean)
+        .collect()
+}
+
+fn clean_app_name(name: &str) -> String {
+    name.trim()
+        .trim_end_matches('/')
+        .trim_end_matches(".html")
+        .to_string()
 }
 
 pub fn preview_slug(value: &str) -> String {
@@ -73,117 +95,69 @@ pub fn preview_slug(value: &str) -> String {
     slug.trim_matches('-').to_string()
 }
 
-fn capture_with_chrome(
-    chrome: &str,
-    url: &str,
+fn capture_with_shot_scraper(
+    path: &Path,
     out: &Path,
     width: u32,
     height: u32,
     timeout: Duration,
 ) -> Result<()> {
-    let profile_dir = temp_profile_dir()?;
-    let chrome_timeout_ms = timeout.as_millis().max(1).to_string();
-    let mut child = Command::new(chrome)
-        .args([
-            "--headless=new",
-            &format!("--timeout={chrome_timeout_ms}"),
-            "--disable-gpu",
-            "--hide-scrollbars",
-            "--ignore-certificate-errors",
-            "--allow-file-access-from-files",
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--run-all-compositor-stages-before-draw",
-            &format!("--user-data-dir={}", profile_dir.display()),
-            &format!("--window-size={width},{height}"),
-            "--force-device-scale-factor=1",
-            &format!("--screenshot={}", out.display()),
-            url,
-        ])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| err(format!("failed to start {chrome}: {e}")))?;
+    let input = path_to_arg(path);
+    let output = path_to_arg(out);
+    let width = width.to_string();
+    let height = height.to_string();
+    let timeout_ms = timeout.as_millis().max(1).to_string();
 
-    let deadline = Instant::now() + timeout + Duration::from_secs(5);
-    loop {
-        if let Some(status) = child.try_wait()? {
-            let _ = fs::remove_dir_all(&profile_dir);
-            if status.success() && out.exists() {
-                return Ok(());
-            }
-            return Err(err(format!("Chrome exited with {status}")));
-        }
-        if Instant::now() >= deadline {
-            let _ = child.kill();
-            let _ = child.wait();
-            let _ = fs::remove_dir_all(&profile_dir);
-            return Err(err(format!(
-                "Chrome screenshot timed out after {:?}",
-                timeout
-            )));
-        }
-        thread::sleep(Duration::from_millis(100));
+    let result = Command::new("uvx")
+        .args([
+            "shot-scraper",
+            "shot",
+            &input,
+            "--output",
+            &output,
+            "--width",
+            &width,
+            "--height",
+            &height,
+            "--quality",
+            "82",
+            "--wait",
+            "2000",
+            "--timeout",
+            &timeout_ms,
+            "--silent",
+        ])
+        .output()
+        .map_err(|e| err(format!("failed to run `uvx shot-scraper`: {e}")))?;
+
+    if result.status.success() && out.exists() {
+        return Ok(());
     }
+
+    let stderr = String::from_utf8_lossy(&result.stderr).trim().to_string();
+    let stdout = String::from_utf8_lossy(&result.stdout).trim().to_string();
+    let detail = if !stderr.is_empty() {
+        stderr
+    } else if !stdout.is_empty() {
+        stdout
+    } else {
+        format!("shot-scraper exited with {}", result.status)
+    };
+    Err(err(detail))
 }
 
-fn capture_url(bag: &Bag, app: &AppEntry) -> String {
+fn capture_path(bag: &Bag, app: &AppEntry) -> PathBuf {
     let rel = app.href.trim_start_matches("./").trim_end_matches('/');
-    let path = if app.is_dir {
+    if app.is_dir {
         bag.dir.join(rel).join("index.html")
     } else {
         bag.dir.join(rel)
-    };
-    file_url(&path)
-}
-
-fn file_url(path: &Path) -> String {
-    let absolute = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-    let raw = absolute.to_string_lossy();
-    format!("file://{}", percent_encode_path(&raw))
-}
-
-fn percent_encode_path(value: &str) -> String {
-    let mut encoded = String::new();
-    for byte in value.bytes() {
-        match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b'/' => {
-                encoded.push(byte as char)
-            }
-            _ => encoded.push_str(&format!("%{byte:02X}")),
-        }
     }
-    encoded
 }
 
-fn temp_profile_dir() -> Result<PathBuf> {
-    let path = std::env::temp_dir().join(format!(
-        "webby-preview-{}-{}",
-        std::process::id(),
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos()
-    ));
-    fs::create_dir_all(&path)?;
-    Ok(path)
-}
-
-fn chrome_binary() -> Result<String> {
-    for name in ["google-chrome", "chromium", "chromium-browser"] {
-        if command_exists(name) {
-            return Ok(name.to_string());
-        }
-    }
-    Err(err("no Chrome/Chromium binary found on PATH"))
-}
-
-fn command_exists(name: &str) -> bool {
-    std::env::var_os("PATH")
-        .and_then(|path| {
-            std::env::split_paths(&path)
-                .map(|dir| dir.join(name))
-                .find(|path| path.exists())
-        })
-        .is_some()
+fn path_to_arg(path: &Path) -> String {
+    fs::canonicalize(path)
+        .unwrap_or_else(|_| path.to_path_buf())
+        .to_string_lossy()
+        .to_string()
 }

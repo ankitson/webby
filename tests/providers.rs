@@ -43,6 +43,15 @@ fn write_app(dir: &Path) {
     .unwrap();
 }
 
+fn write_named_app(root: &Path, name: &str) {
+    fs::create_dir_all(root.join(name)).unwrap();
+    fs::write(
+        root.join(name).join("index.html"),
+        format!("<!doctype html><h1>{name}</h1>\n"),
+    )
+    .unwrap();
+}
+
 fn write_config(root: &Path, body: &str) -> PathBuf {
     let config = root.join("config.json");
     fs::write(&config, body).unwrap();
@@ -76,7 +85,8 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     let tmp = TestDir::new("local-caddy");
     let local = tmp.path().join("local");
     let caddy = tmp.path().join("caddy");
-    write_app(&local);
+    write_named_app(&local, "app");
+    write_named_app(&local, "other");
     write_app(&caddy);
     let config = write_config(
         tmp.path(),
@@ -116,6 +126,78 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     );
     assert!(caddy.join("browse.html").exists());
     assert!(String::from_utf8_lossy(&caddy_out.stdout).contains("https://caddy.example"));
+}
+
+#[test]
+fn preview_uses_shot_scraper_via_uvx() {
+    let tmp = TestDir::new("preview");
+    let bin_dir = tmp.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let capture = tmp.path().join("uvx.log");
+    fake_exe(
+        &bin_dir,
+        "uvx",
+        r#"#!/bin/sh
+echo "uvx $*" >> "$WEBBY_CAPTURE"
+out=""
+prev=""
+for arg in "$@"; do
+  if [ "$prev" = "--output" ]; then out="$arg"; fi
+  prev="$arg"
+done
+if [ -z "$out" ]; then exit 2; fi
+printf "jpeg" > "$out"
+exit 0
+"#,
+    );
+
+    let local = tmp.path().join("local");
+    write_app(&local);
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .env("PATH", bin_dir)
+        .env("WEBBY_CAPTURE", &capture)
+        .args([
+            "preview",
+            "app",
+            "-b",
+            "local",
+            "--force",
+            "--width",
+            "640",
+            "--height",
+            "360",
+            "--timeout-secs",
+            "2",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(local.join(".webby-previews").join("app.jpg").exists());
+    assert!(!local.join(".webby-previews").join("other.jpg").exists());
+
+    let log = fs::read_to_string(capture).unwrap();
+    assert!(log.contains("uvx shot-scraper shot"));
+    assert_eq!(log.lines().count(), 1);
+    assert!(log.contains("--width 640 --height 360"));
+    assert!(log.contains("--wait 2000"));
+    assert!(log.contains("--timeout 2000"));
 }
 
 #[test]

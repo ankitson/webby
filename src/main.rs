@@ -122,6 +122,8 @@ enum Command {
     },
     /// Capture static screenshot previews for a bag.
     Preview {
+        /// Optional app name to preview instead of the whole bag.
+        app: Option<String>,
         #[arg(short = 'b', long = "bag")]
         bag: Option<String>,
         #[arg(long)]
@@ -178,6 +180,7 @@ fn run() -> Result<()> {
             Ok(())
         }
         Command::Preview {
+            app,
             bag,
             force,
             width,
@@ -192,6 +195,7 @@ fn run() -> Result<()> {
                 width,
                 height,
                 std::time::Duration::from_secs(timeout_secs),
+                app.as_deref(),
             )
         }
     }

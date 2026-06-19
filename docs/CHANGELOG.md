@@ -1,5 +1,19 @@
 ## 2026-06-18
 
+### Shot-Scraper Preview Capture
+
+Modified:
+- `webby preview` now delegates page screenshots to `uvx shot-scraper`.
+- Preview capture waits 2000ms before taking each screenshot.
+- `webby preview [APP] -b <bag>` can refresh one app preview instead of the whole bag.
+- Removed the direct Rust-managed Chrome screenshot process and file URL encoding path.
+
+Added:
+- Integration coverage that verifies `webby preview` invokes `uvx shot-scraper` with the requested size and timeout.
+
+Why:
+- Chrome's native `--headless --screenshot` path can hang indefinitely on fast-rendering MkDocs pages such as `jobsearch-docs`, while `shot-scraper` captures them reliably through Playwright.
+
 ### Cloudflare Wrangler Fallback
 
 Modified:
