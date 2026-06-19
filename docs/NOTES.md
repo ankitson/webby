@@ -1,3 +1,16 @@
+## 2026-06-18 — GitHub Releases
+
+Goal: add a maintainable release path for prebuilt webby binaries.
+
+Decision:
+- Use a tag-driven GitHub Actions workflow on `v*` tags.
+- Build native binaries on Ubuntu and macOS runners.
+- Publish packaged artifacts to a GitHub Release using the built-in `GITHUB_TOKEN`.
+
+Verification:
+- `just check`
+- YAML parsed with Python's YAML parser.
+
 ## 2026-06-18 — Shot-Scraper Preview Backend
 
 Goal: make page preview capture reliable for static documentation sites.

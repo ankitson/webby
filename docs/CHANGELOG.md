@@ -1,5 +1,18 @@
 ## 2026-06-18
 
+### GitHub Release Workflow
+
+Added:
+- GitHub Actions release workflow for `v*` tags.
+- Native Linux and macOS binary packaging.
+- `just release <version>` helper for pushing release tags.
+
+Modified:
+- README now documents prebuilt GitHub release binaries and tag-driven publishing.
+
+Why:
+- Users should have a binary download path in addition to `cargo install --git`.
+
 ### Shot-Scraper Preview Capture
 
 Modified:

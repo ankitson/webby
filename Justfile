@@ -48,7 +48,12 @@ install:
 
 # Install webby from the Git repository.
 install-git:
-    cargo install --git https://github.com/ankitson/webby --branch feat/oss-host-providers
+    cargo install --git https://github.com/ankitson/webby
+
+# Push a v-prefixed release tag, which triggers the GitHub release workflow.
+release version:
+    git tag v{{version}}
+    git push origin v{{version}}
 
 # Build a React/JSX app asset with Bun when an app needs it.
 build-jsx app:
