@@ -52,7 +52,7 @@ install-git:
 
 # Push a v-prefixed release tag, which triggers the GitHub release workflow.
 release version:
-    git tag v{{version}}
+    git tag -a v{{version}} -m "webby v{{version}}"
     git push origin v{{version}}
 
 # Build a React/JSX app asset with Bun when an app needs it.
