@@ -8,19 +8,7 @@ description: Serve or publish a static HTML app to localhost, Tailscale Serve, T
 Drop a static app into a bag and get a URL. An app is a folder with
 `index.html` or a standalone `.html` file. Name it `tmp*` for scratch.
 
-## Run From This Repo
-
-```sh
-cargo run -- where
-cargo run -- add ./clock.html
-cargo run -- serve
-```
-
-Installed CLI:
-
-```sh
-webby where
-```
+Install: `cargo install --git https://github.com/ankitson/webby && webby ls`
 
 ## Bags
 
