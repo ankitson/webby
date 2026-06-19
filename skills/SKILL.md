@@ -8,7 +8,7 @@ description: Serve or publish a static HTML app to localhost, Tailscale Serve, T
 Drop a static app into a bag and get a URL. An app is a folder with
 `index.html` or a standalone `.html` file. Name it `tmp*` for scratch.
 
-Install: `cargo install --git https://github.com/ankitson/webby && webby ls`
+Install: `cargo install webby-deploy && webby ls`
 
 ## Bags
 
