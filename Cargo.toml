@@ -1,5 +1,5 @@
 [package]
-name = "webby"
+name = "webby-deploy"
 version = "0.2.0"
 edition = "2024"
 description = "Drop a static HTML app into a local, tailnet, temporary public, or durable public URL."

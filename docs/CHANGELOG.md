@@ -6,6 +6,10 @@ Added:
 - Crates.io package metadata in `Cargo.toml`, including license, repository, homepage, documentation, readme, keywords, and categories.
 - Package excludes for repo-local release workflows, bags, logs, and skills so `cargo publish` ships only the crate-relevant files.
 
+Modified:
+- Renamed the Cargo package to `webby-deploy` because the `webby` crate name is already taken on crates.io.
+- README install instructions now use `cargo install webby-deploy` while keeping the installed binary named `webby`.
+
 Fixed:
 - Rust 2024 compatibility for `.env.secret` loading by isolating the now-unsafe process environment mutation during startup.
 

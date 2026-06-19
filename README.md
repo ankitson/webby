@@ -9,15 +9,7 @@ activate tailnet, temporary public, durable public, or custom hosting.
 ## Install
 
 ```sh
-cargo install --git https://github.com/ankitson/webby
-```
-
-Prebuilt binaries are attached to GitHub releases. Maintainers publish a release
-by pushing a version tag:
-
-```sh
-git tag v0.2.0
-git push origin v0.2.0
+cargo install webby-deploy
 ```
 
 ## Start Fast
