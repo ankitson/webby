@@ -1,8 +1,21 @@
 [package]
 name = "webby"
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 description = "Drop a static HTML app into a local, tailnet, temporary public, or durable public URL."
+license = "MIT"
+repository = "https://github.com/ankitson/webby"
+homepage = "https://github.com/ankitson/webby"
+documentation = "https://github.com/ankitson/webby#readme"
+readme = "README.md"
+keywords = ["static-site", "cli", "tailscale", "cloudflare", "deploy"]
+categories = ["command-line-utilities", "web-programming"]
+exclude = [
+    ".github/",
+    "bags/",
+    "logs/",
+    "skills/",
+]
 
 [[bin]]
 name = "webby"

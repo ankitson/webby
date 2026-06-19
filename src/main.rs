@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use crate::app::{
     app_url, generate_browse_template, generate_index, list_apps, remove_app, stage_app,
 };
-use crate::config::{sample_config, Config, Host};
+use crate::config::{Config, Host, sample_config};
 use crate::preview::capture_previews;
 use crate::providers::{after_add, attach_domain, base_url, deploy_bag, open_app};
 

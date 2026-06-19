@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::config::{Bag, Host};
-use crate::{err, Result};
+use crate::{Result, err};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppEntry {

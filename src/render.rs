@@ -1,4 +1,4 @@
-use minijinja::{context, Environment};
+use minijinja::{Environment, context};
 
 use crate::app::AppEntry;
 use crate::preview::preview_slug;

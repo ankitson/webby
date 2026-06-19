@@ -4,9 +4,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
 
-use crate::app::{list_apps, AppEntry};
+use crate::app::{AppEntry, list_apps};
 use crate::config::Bag;
-use crate::{err, Result};
+use crate::{Result, err};
 
 pub fn capture_previews(
     bag: &Bag,

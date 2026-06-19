@@ -4,7 +4,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::{err, Result};
+use crate::{Result, err};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "kebab-case")]
@@ -324,19 +324,11 @@ fn load_env_file() -> Result<()> {
     let file = match env::var("WEBBY_ENV") {
         Ok(path) => {
             let path = PathBuf::from(path);
-            if path.exists() {
-                Some(path)
-            } else {
-                None
-            }
+            if path.exists() { Some(path) } else { None }
         }
         Err(_) => {
             let local = PathBuf::from(".env.secret");
-            if local.exists() {
-                Some(local)
-            } else {
-                None
-            }
+            if local.exists() { Some(local) } else { None }
         }
     };
     let Some(file) = file else {
@@ -362,9 +354,18 @@ fn load_env_file() -> Result<()> {
         {
             value = value[1..value.len() - 1].to_string();
         }
-        env::set_var(key.trim(), value);
+        set_env_default(key.trim(), value);
     }
     Ok(())
+}
+
+fn set_env_default(key: &str, value: String) {
+    // SAFETY: webby loads its optional env file during single-threaded startup,
+    // before it starts the local server or spawns provider commands. The process
+    // environment is not mutated concurrently here.
+    unsafe {
+        env::set_var(key, value);
+    }
 }
 
 fn home_dir() -> PathBuf {

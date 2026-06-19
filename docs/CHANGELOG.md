@@ -1,5 +1,17 @@
 ## 2026-06-18
 
+### Crates.io Package Metadata
+
+Added:
+- Crates.io package metadata in `Cargo.toml`, including license, repository, homepage, documentation, readme, keywords, and categories.
+- Package excludes for repo-local release workflows, bags, logs, and skills so `cargo publish` ships only the crate-relevant files.
+
+Fixed:
+- Rust 2024 compatibility for `.env.secret` loading by isolating the now-unsafe process environment mutation during startup.
+
+Why:
+- `cargo publish` requires complete package metadata and should not include local generated site artifacts.
+
 ### Caddy Browse Tile Markup
 
 Fixed:

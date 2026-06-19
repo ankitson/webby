@@ -4,7 +4,7 @@ use std::process::{Command, Stdio};
 
 use crate::app::generate_index;
 use crate::config::{Bag, Host};
-use crate::{err, Result};
+use crate::{Result, err};
 
 pub fn base_url(bag: &Bag, port_override: Option<u16>) -> String {
     match &bag.host {
@@ -161,12 +161,12 @@ pub fn attach_domain(bag: &Bag, hostname: &str) -> Result<()> {
             return Err(err(format!(
                 "Cloudflare domain attach failed with HTTP {}",
                 resp.status()
-            )))
+            )));
         }
         Err(ureq::Error::Status(code, _)) => {
             return Err(err(format!(
                 "Cloudflare domain attach failed with HTTP {code}"
-            )))
+            )));
         }
         Err(error) => return Err(err(format!("Cloudflare domain attach failed: {error}"))),
     }
