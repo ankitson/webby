@@ -7,11 +7,11 @@ target/
 *.secret
 
 # Generated browse listing for the public bag (rebuilt on every deploy).
-public/index.html
+bags/public/index.html
 
 # Scratch apps in any bag are never committed (tmp* rule, both bags).
-public/tmp*
-internal/tmp*
+bags/public/tmp*
+bags/internal/tmp*
 
 # internal apps are not committed
-internal/
+bags/internal/
