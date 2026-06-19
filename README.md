@@ -12,12 +12,6 @@ activate tailnet, temporary public, durable public, or custom hosting.
 cargo install --git https://github.com/ankitson/webby
 ```
 
-From a checkout:
-
-```sh
-cargo install --path .
-```
-
 ## Start Fast
 
 No config required:
@@ -30,21 +24,10 @@ webby serve
 That stages `clock.html` in the `local` bag and serves the bag at
 `http://localhost:8765`.
 
-## Bags
-
-Built-in bags:
-
-| bag | provider | reach |
-| --- | --- | --- |
-| `local` | `local` | localhost preview |
-| `tailnet` | `tailscale-serve` | private Tailscale HTTPS |
-| `funnel` | `tailscale-funnel` | temporary public HTTPS |
-| `public` | `cloudflare-pages` | durable public HTTPS |
-
-If `INTERNAL_URL` or `INTERNAL_DIR` is set, webby also adds an `internal` Caddy
-compatibility bag.
-
 ## Commands
+
+A bag is a named directory plus a hosting provider. Apps are copied into a bag,
+then the provider decides how that directory gets a URL.
 
 ```sh
 webby add <path> [--name N] [--tmp] [-b BAG]
@@ -72,6 +55,18 @@ by serving images instead of live iframes. Pass an app name, for example
 `webby preview jobsearch-docs -b internal --force`, to refresh one preview.
 
 ## Provider Examples
+
+Built-in bags:
+
+| bag | provider | reach |
+| --- | --- | --- |
+| `local` | `local` | localhost preview |
+| `tailnet` | `tailscale-serve` | private Tailscale HTTPS |
+| `funnel` | `tailscale-funnel` | temporary public HTTPS |
+| `public` | `cloudflare-pages` | durable public HTTPS |
+
+If `INTERNAL_URL` or `INTERNAL_DIR` is set, webby also adds an `internal` Caddy
+compatibility bag.
 
 Tailnet:
 
