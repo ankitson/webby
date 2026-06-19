@@ -16,7 +16,6 @@
     <a href="https://tools.home.ankitson.com">internal</a>
   </nav>
   <section class="grid" id="tools-grid" aria-label="Sites"></section>
-  <section class="grid scratch" id="temp-grid" aria-label="Scratch sites" hidden></section>
   <template id="items">{% raw %}{{range .Items}}<article data-name="{{html .Name}}" data-isdir="{{.IsDir}}" data-url="{{html .URL}}"></article>{{end}}{% endraw %}</template>
   <script>
 (function () {
@@ -34,7 +33,6 @@
 
   var tpl = document.getElementById('items').content;
   var toolsGrid = document.getElementById('tools-grid');
-  var tempGrid = document.getElementById('temp-grid');
   for (var el of tpl.querySelectorAll('article')) {
     var raw = el.dataset.name;
     var isDir = el.dataset.isdir === 'true';
@@ -46,25 +44,41 @@
     var isTmp = /^tmp[-_]?/.test(clean);
     var display = isTmp ? (clean.replace(/^tmp[-_]?/, '') || clean) : clean;
     var hue = hueFor(clean);
+
     var preview = document.createElement('div');
     preview.className = 'preview';
     preview.setAttribute('aria-hidden', 'true');
-    var span = document.createElement('span');
-    span.textContent = display;
-    var link = document.createElement('a');
-    link.className = 'site-link';
-    link.href = url;
-    link.appendChild(span);
+
+    var previewLink = document.createElement('a');
+    previewLink.className = 'preview-link';
+    previewLink.href = url;
+    previewLink.setAttribute('aria-label', 'Open ' + display);
+    previewLink.appendChild(preview);
+
+    var title = document.createElement('a');
+    title.className = 'site-title';
+    title.href = url;
+    title.textContent = display;
+
+    var caption = document.createElement('div');
+    caption.className = 'site-caption';
+    caption.appendChild(title);
+    if (isTmp) {
+      var label = document.createElement('span');
+      label.className = 'temp-label';
+      label.textContent = 'temp';
+      caption.appendChild(label);
+    }
+
     var tile = document.createElement('article');
     tile.className = 'site';
     tile.style.setProperty('--tile-hue', hue);
     tile.style.setProperty('--tile-shift', (hue + 72) % 360);
     tile.style.setProperty('--preview-image', "url('/.webby-previews/" + previewSlug(clean) + ".jpg')");
-    tile.appendChild(preview);
-    tile.appendChild(link);
-    (isTmp ? tempGrid : toolsGrid).appendChild(tile);
+    tile.appendChild(previewLink);
+    tile.appendChild(caption);
+    toolsGrid.appendChild(tile);
   }
-  if (tempGrid.children.length) tempGrid.hidden = false;
 })();
   </script>
 </main>

@@ -18,16 +18,35 @@ fn card(app: &AppEntry) -> String {
     let hue = hue_for(&app.name);
     let hue_shift = (hue + 72) % 360;
     let preview = format!("./.webby-previews/{}.jpg", preview_slug(&app.name));
+    let title = display_title(app);
+    let temp_label = if app.tmp {
+        "<span class=\"temp-label\">temp</span>"
+    } else {
+        ""
+    };
     format!(
-        "<article class=\"site\" style=\"--tile-hue: {}; --tile-shift: {}; --preview-image: url('{}')\"><a class=\"preview-link\" href=\"{}\" aria-label=\"Open {}\"><div class=\"preview\" aria-hidden=\"true\"></div></a><a class=\"site-title\" href=\"{}\">{}</a></article>\n    ",
+        "<article class=\"site\" style=\"--tile-hue: {}; --tile-shift: {}; --preview-image: url('{}')\"><a class=\"preview-link\" href=\"{}\" aria-label=\"Open {}\"><div class=\"preview\" aria-hidden=\"true\"></div></a><div class=\"site-caption\"><a class=\"site-title\" href=\"{}\">{}</a>{}</div></article>\n    ",
         hue,
         hue_shift,
         esc(&preview),
         esc(&app.href),
-        esc(&app.name),
+        esc(&title),
         esc(&app.href),
-        esc(&app.name),
+        esc(&title),
+        temp_label,
     )
+}
+
+fn display_title(app: &AppEntry) -> String {
+    if app.tmp {
+        app.name
+            .strip_prefix("tmp-")
+            .or_else(|| app.name.strip_prefix("tmp_"))
+            .unwrap_or(&app.name)
+            .to_string()
+    } else {
+        app.name.clone()
+    }
 }
 
 fn hue_for(value: &str) -> u32 {
@@ -45,15 +64,12 @@ fn esc(value: &str) -> String {
 }
 
 pub fn render_index(apps: &[AppEntry], title: &str) -> String {
-    let tools: Vec<&AppEntry> = apps.iter().filter(|a| !a.tmp).collect();
-    let temp: Vec<&AppEntry> = apps.iter().filter(|a| a.tmp).collect();
-    let items: String = tools.iter().map(|a| card(a)).collect();
-    let scratch_items: String = temp.iter().map(|a| card(a)).collect();
+    let items: String = apps.iter().map(card).collect();
 
     make_env()
         .get_template("index.html")
         .expect("index.html template")
-        .render(context! { title, items, scratch_items })
+        .render(context! { title, items })
         .expect("render index.html")
 }
 
@@ -94,8 +110,11 @@ mod tests {
         assert!(html.contains("--preview-image: url('./.webby-previews/alpha.jpg')"));
         assert!(html.contains("<div class=\"preview\" aria-hidden=\"true\"></div>"));
         assert!(html.contains("class=\"preview-link\""));
-        assert!(html.contains("<a class=\"site-title\" href=\"./alpha/\">alpha</a>"));
-        assert!(html.contains("<a class=\"site-title\" href=\"./tmp-beta.html\">tmp-beta</a>"));
+        assert!(html.contains(
+            "<div class=\"site-caption\"><a class=\"site-title\" href=\"./alpha/\">alpha</a></div>"
+        ));
+        assert!(html.contains("<div class=\"site-caption\"><a class=\"site-title\" href=\"./tmp-beta.html\">beta</a><span class=\"temp-label\">temp</span></div>"));
+        assert_eq!(html.matches("class=\"grid\"").count(), 1);
         assert!(!html.contains("<iframe"));
         assert!(!html.contains(">alpha</span>"));
         assert!(!html.contains(">beta</span>"));
@@ -114,6 +133,11 @@ mod tests {
         assert!(html.contains("data-isdir="));
         assert!(html.contains("data-url="));
         assert!(html.contains("class=\"site\"") || html.contains("id=\"tools-grid\""));
+        assert!(html.contains("className = 'preview-link'"));
+        assert!(html.contains("className = 'site-caption'"));
+        assert!(html.contains("className = 'site-title'"));
+        assert!(html.contains("className = 'temp-label'"));
+        assert!(!html.contains("id=\"temp-grid\""));
         assert!(html.contains("hueFor"));
         assert!(html.contains("previewSlug"));
         assert!(html.contains("if (/^\\./.test(raw)) continue;"));

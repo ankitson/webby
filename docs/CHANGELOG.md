@@ -1,5 +1,17 @@
 ## 2026-06-18
 
+### Caddy Browse Tile Markup
+
+Fixed:
+- Caddy browse template now emits `.preview-link` and `.site-title` markup to match the shared tile CSS.
+
+Modified:
+- Temp apps now render alongside regular apps in the same grid with a compact `temp` label near the title.
+- Temp app previews are no longer faded or moved into a separate row.
+
+Why:
+- The old Caddy-only markup put `.preview` directly inside `.site`, so the absolute-positioned preview had no sized parent and tiles collapsed to tiny label-height rows.
+
 ### GitHub Release Workflow
 
 Added:

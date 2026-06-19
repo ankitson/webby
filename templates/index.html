@@ -18,11 +18,6 @@
   <section class="grid" aria-label="Sites">
     {% if items %}{{ items | safe }}{% else %}<p class="empty">Nothing here yet.</p>{% endif %}
   </section>
-  {% if scratch_items %}
-  <section class="grid scratch" aria-label="Scratch sites">
-    {{ scratch_items | safe }}
-  </section>
-  {% endif %}
 </main>
 </body>
 </html>

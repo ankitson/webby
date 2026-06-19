@@ -1,3 +1,20 @@
+## 2026-06-18 — Caddy Browse Tile Collapse
+
+Goal: fix internal Caddy browse tiles collapsing after regenerating the internal homepage.
+
+Discovery:
+- The shared CSS sizes `.preview-link` with `aspect-ratio`, then absolutely positions `.preview` inside it.
+- The Caddy browse JavaScript still generated `.preview` directly inside `.site` and used `.site-link`, so the tile had no sized preview box.
+
+Change:
+- Updated `templates/browse.html` to generate `.preview-link > .preview` and `.site-title`.
+- Moved temp apps into the main grid for both static and Caddy indexes.
+- Added a compact `temp` label in the tile caption instead of fading temp previews or rendering them in a second row.
+- Extended the render test to assert those browse-template classes.
+
+Verification:
+- `just check`
+
 ## 2026-06-18 — GitHub Releases
 
 Goal: add a maintainable release path for prebuilt webby binaries.
