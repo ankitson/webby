@@ -8,6 +8,7 @@ target/
 
 # Generated browse listing for the public bag (rebuilt on every deploy).
 bags/public/index.html
+bags/public/webby-card-grid.js
 
 # Scratch apps in any bag are never committed (tmp* rule, both bags).
 bags/public/tmp*

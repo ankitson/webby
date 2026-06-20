@@ -15,9 +15,14 @@
     <a href="https://mini.ankitson.com">public</a>
     <a href="https://tools.home.ankitson.com">internal</a>
   </nav>
-  <section class="grid" aria-label="Sites">
-    {% if items %}{{ items | safe }}{% else %}<p class="empty">Nothing here yet.</p>{% endif %}
-  </section>
+  <webby-card-grid id="webby-grid" aria-label="Sites"></webby-card-grid>
+  <script type="application/json" id="webby-card-data">{{ items_json | safe }}</script>
+  <script type="module">
+    import "./webby-card-grid.js";
+
+    const data = document.getElementById("webby-card-data");
+    document.getElementById("webby-grid").items = JSON.parse(data.textContent || "[]");
+  </script>
 </main>
 </body>
 </html>

@@ -1,3 +1,58 @@
+## 2026-06-19 — Remove Browse Mode
+
+Goal: remove Webby's old Caddy-specific browse mode now that the homeserver homepage consumes `webby-cards.json` directly.
+
+Decision:
+- Keep `page` for standalone generated Webby indexes.
+- Keep `manifest-only` for host pages that consume Webby card data and render their own homepage sections.
+- Remove the `browse` index mode, the `gen-browse` command, and the Caddy browse template.
+- Do not special-case or clean up `browse.html`; with browse mode gone it is just another standalone HTML app name.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`
+
+## 2026-06-19 — Shared Card Grid Web Component
+
+Goal: make Webby's card UI reusable by `tools.home.ankitson.com`, generated bag indexes, and other static pages without duplicating DOM/CSS card logic.
+
+Decision:
+- Add a plain ES module web component, `<webby-card-grid>`, with Shadow DOM and bundled Webby card styles.
+- Keep Rust as the data producer: it scans bag entries, writes `webby-card-grid.js`, and embeds normalized card JSON into generated index pages.
+- Use CSS custom properties and Shadow DOM parts for page-level overrides instead of carrying separate page card styles.
+
+Verification:
+- `cargo fmt`
+- `cargo test`
+- Browser smoke checks confirmed the custom element upgraded and rendered cards on `home.ankitson.com` and `tools.home.ankitson.com`.
+
+## 2026-06-19 — Stable Card Width Layout Option
+
+Goal: keep homepage cards from slowly growing and then snapping smaller when a new responsive grid column fits.
+
+Decision:
+- Add an opt-in `stable-card-width` attribute to `<webby-card-grid>`.
+- In stable mode, dense grids keep cards at `--webby-card-stable-width` and compute the column gap needed to span the available row width.
+- Sparse grids still grow cards up to `--webby-card-max-width` so two-card rows do not turn into tiny cards separated by a giant gap.
+
+Verification:
+- `cargo test`
+- Browser measurements on `home.ankitson.com` at 1280, 1440, 1520, 1600, and 1920px showed dense cards staying at 292px while columns changed.
+
+## 2026-06-19 — Card Manifest Output Mode
+
+Goal: let a host homepage reuse Webby app cards without serving a separate Webby index page.
+
+Decision:
+- Every deploy writes `webby-cards.json` with the same normalized card data used by the Webby component.
+- Added bag-level `indexMode`: `page` or `manifest-only`.
+- `manifest-only` removes generated `index.html` and keeps only reusable card data plus `webby-card-grid.js`.
+- Directory staging now skips local metadata/cache folders such as `.git`, `.wrangler`, `node_modules`, and `logs`.
+
+Verification:
+- `cargo test`
+- Added coverage for `manifest-only` output and metadata directory skipping.
+
 ## 2026-06-18 — Caddy Browse Tile Collapse
 
 Goal: fix internal Caddy browse tiles collapsing after regenerating the internal homepage.

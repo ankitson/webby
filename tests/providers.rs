@@ -52,6 +52,20 @@ fn write_named_app(root: &Path, name: &str) {
     .unwrap();
 }
 
+fn write_app_with_metadata(dir: &Path) {
+    write_named_app(dir, "source-app");
+    fs::create_dir_all(dir.join("source-app").join(".git")).unwrap();
+    fs::create_dir_all(dir.join("source-app").join(".wrangler")).unwrap();
+    fs::create_dir_all(dir.join("source-app").join("logs")).unwrap();
+    fs::write(dir.join("source-app").join(".git").join("HEAD"), "secret").unwrap();
+    fs::write(
+        dir.join("source-app").join(".wrangler").join("pages.json"),
+        "{}",
+    )
+    .unwrap();
+    fs::write(dir.join("source-app").join("logs").join("run.log"), "log").unwrap();
+}
+
 fn write_config(root: &Path, body: &str) -> PathBuf {
     let config = root.join("config.json");
     fs::write(&config, body).unwrap();
@@ -124,8 +138,92 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
         "{}",
         String::from_utf8_lossy(&caddy_out.stderr)
     );
-    assert!(caddy.join("browse.html").exists());
+    assert!(caddy.join("index.html").exists());
     assert!(String::from_utf8_lossy(&caddy_out.stdout).contains("https://caddy.example"));
+}
+
+#[test]
+fn manifest_only_bag_writes_card_manifest_without_page() {
+    let tmp = TestDir::new("manifest-only");
+    let caddy = tmp.path().join("caddy");
+    write_named_app(&caddy, "app");
+    fs::write(caddy.join("index.html"), "old index").unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "bags": {{
+                "caddy": {{
+                  "dir": "{}",
+                  "indexMode": "manifest-only",
+                  "host": {{ "type": "caddy", "url": "https://caddy.example" }}
+                }}
+              }}
+            }}"#,
+            caddy.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args(["deploy", "-b", "caddy"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(caddy.join("webby-cards.json").exists());
+    assert!(caddy.join("webby-card-grid.js").exists());
+    assert!(!caddy.join("index.html").exists());
+    let manifest = fs::read_to_string(caddy.join("webby-cards.json")).unwrap();
+    assert!(manifest.contains("\"id\": \"app\""));
+    assert!(
+        String::from_utf8_lossy(&out.stdout)
+            .contains(&format!("generated: {}/webby-cards.json", caddy.display()))
+    );
+}
+
+#[test]
+fn add_directory_skips_local_metadata_dirs() {
+    let tmp = TestDir::new("copy-skip");
+    let source = tmp.path().join("source");
+    let public = tmp.path().join("public");
+    write_app_with_metadata(&source);
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "bags": {{
+                "public": {{
+                  "dir": "{}",
+                  "host": {{ "type": "local", "port": 7777 }}
+                }}
+              }}
+            }}"#,
+            public.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args([
+            "add",
+            source.join("source-app").to_str().unwrap(),
+            "-b",
+            "public",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let staged = public.join("source-app");
+    assert!(staged.join("index.html").exists());
+    assert!(!staged.join(".git").exists());
+    assert!(!staged.join(".wrangler").exists());
+    assert!(!staged.join("logs").exists());
 }
 
 #[test]

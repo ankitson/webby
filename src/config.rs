@@ -48,11 +48,19 @@ pub enum Host {
     },
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum IndexMode {
+    Page,
+    ManifestOnly,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Bag {
     pub label: String,
     pub dir: PathBuf,
     pub host: Host,
+    pub index_mode: IndexMode,
 }
 
 #[derive(Clone, Debug)]
@@ -76,6 +84,8 @@ struct RawBag {
     dir: Option<String>,
     url: Option<String>,
     host: Option<Host>,
+    #[serde(rename = "indexMode", alias = "index_mode")]
+    index_mode: Option<IndexMode>,
 }
 
 impl Config {
@@ -288,7 +298,19 @@ fn merge_user_config(bags: &mut Vec<Bag>, raw: &RawConfig) -> Result<()> {
         if let Some(url) = &raw_bag.url {
             set_host_url(&mut host, url.clone());
         }
-        upsert_bag(bags, bag(label, dir, host));
+        let index_mode = raw_bag
+            .index_mode
+            .or_else(|| existing.map(|b| b.index_mode))
+            .unwrap_or(IndexMode::Page);
+        upsert_bag(
+            bags,
+            Bag {
+                label: label.clone(),
+                dir,
+                host,
+                index_mode,
+            },
+        );
     }
     Ok(())
 }
@@ -317,6 +339,7 @@ fn bag(label: impl Into<String>, dir: PathBuf, host: Host) -> Bag {
         label: label.into(),
         dir,
         host,
+        index_mode: IndexMode::Page,
     }
 }
 

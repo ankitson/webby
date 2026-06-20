@@ -59,10 +59,6 @@ release version:
 build-jsx app:
     bun build {{app}}/app.jsx --bundle --outfile {{app}}/bundle.js
 
-# Regenerate internal/browse.html from the shared render templates.
-gen-browse:
-    cargo run -- gen-browse --out internal/browse.html
-
 # Capture static screenshots for the internal Caddy bag.
 preview-internal:
     cargo run -- preview -b internal

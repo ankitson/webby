@@ -2,7 +2,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::config::{Bag, Host};
+use crate::config::{Bag, IndexMode};
 use crate::{Result, err};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -92,10 +92,7 @@ pub fn list_apps(bag: &Bag) -> Result<Vec<AppEntry>> {
                 href: format!("./{file_name}/"),
                 tmp,
             });
-        } else if file_name.to_lowercase().ends_with(".html")
-            && file_name != "index.html"
-            && file_name != "browse.html"
-        {
+        } else if file_name.to_lowercase().ends_with(".html") && file_name != "index.html" {
             let name = file_name.trim_end_matches(".html").to_string();
             let tmp = name.starts_with("tmp");
             apps.push(AppEntry {
@@ -128,26 +125,26 @@ pub fn remove_app(bag: &Bag, name: &str) -> Result<PathBuf> {
 pub fn generate_index(bag: &Bag) -> Result<Vec<AppEntry>> {
     fs::create_dir_all(&bag.dir)?;
     let apps = list_apps(bag)?;
-    if matches!(bag.host, Host::Caddy { .. }) {
-        fs::write(
-            bag.dir.join("browse.html"),
-            crate::render::render_caddy_browse_template(),
-        )?;
-    } else {
-        fs::write(
-            bag.dir.join("index.html"),
-            crate::render::render_index(&apps, "webby"),
-        )?;
+    fs::write(
+        bag.dir.join("webby-cards.json"),
+        crate::render::render_card_manifest(&apps),
+    )?;
+    fs::write(
+        bag.dir.join("webby-card-grid.js"),
+        crate::render::web_component_js(),
+    )?;
+    match bag.index_mode {
+        IndexMode::Page => {
+            fs::write(
+                bag.dir.join("index.html"),
+                crate::render::render_index(&apps, "webby"),
+            )?;
+        }
+        IndexMode::ManifestOnly => {
+            remove_any(&bag.dir.join("index.html"))?;
+        }
     }
     Ok(apps)
-}
-
-pub fn generate_browse_template(out: &Path) -> Result<()> {
-    if let Some(parent) = out.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::write(out, crate::render::render_caddy_browse_template())?;
-    Ok(())
 }
 
 pub fn app_url(base_url: &str, name: &str, is_dir: bool) -> String {
@@ -192,6 +189,9 @@ fn copy_dir_all(src: &Path, dest: &Path) -> Result<()> {
     fs::create_dir_all(dest)?;
     for entry in fs::read_dir(src)? {
         let entry = entry?;
+        if should_skip_copy(&entry.file_name()) {
+            continue;
+        }
         let from = entry.path();
         let to = dest.join(entry.file_name());
         if entry.file_type()?.is_dir() {
@@ -201,4 +201,11 @@ fn copy_dir_all(src: &Path, dest: &Path) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn should_skip_copy(name: &OsStr) -> bool {
+    matches!(
+        name.to_str(),
+        Some(".git" | ".wrangler" | ".DS_Store" | "node_modules" | "logs")
+    )
 }

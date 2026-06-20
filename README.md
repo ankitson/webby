@@ -54,6 +54,10 @@ existing previews unless `--force` is passed, and keeps generated indexes fast
 by serving images instead of live iframes. Pass an app name, for example
 `webby preview jobsearch-docs -b internal --force`, to refresh one preview.
 
+Every deploy writes `webby-cards.json` next to the generated assets. That JSON
+contains the same card data used by Webby's index component, so another page can
+embed a Webby bag without scraping a directory listing.
+
 ## Provider Examples
 
 Built-in bags:
@@ -126,6 +130,11 @@ Example:
         "project": "webby",
         "tokenEnv": "CLOUDFLARE_API_TOKEN"
       }
+    },
+    "homepage-tools": {
+      "dir": "~/.local/share/webby/tools",
+      "indexMode": "manifest-only",
+      "host": { "type": "caddy", "url": "https://example.test/webby/" }
     }
   }
 }
@@ -137,6 +146,17 @@ checkout, a local `.env.secret` file is loaded if present.
 ## Provider Notes
 
 `local` generates an index and can be served with `webby serve`.
+
+Bag `indexMode` controls generated index artifacts:
+
+- `page`: write `index.html` plus `webby-cards.json`.
+- `manifest-only`: write only `webby-cards.json` and `webby-card-grid.js`.
+
+`manifest-only` is for a larger site that wants Webby to manage app staging and
+card data but render the cards inside its own homepage.
+
+Caddy-hosted bags do not get a special listing mode. Use `page` for a standalone
+Webby index, or `manifest-only` when another homepage consumes `webby-cards.json`.
 
 `tailscale-serve` and `tailscale-funnel` call the `tailscale` CLI with the bag
 directory as the target.

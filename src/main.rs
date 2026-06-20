@@ -1,4 +1,5 @@
 mod app;
+mod cards;
 mod config;
 mod preview;
 mod providers;
@@ -10,9 +11,7 @@ use std::fmt;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::app::{
-    app_url, generate_browse_template, generate_index, list_apps, remove_app, stage_app,
-};
+use crate::app::{app_url, generate_index, list_apps, remove_app, stage_app};
 use crate::config::{Config, Host, sample_config};
 use crate::preview::capture_previews;
 use crate::providers::{after_add, attach_domain, base_url, deploy_bag, open_app};
@@ -113,13 +112,6 @@ enum Command {
         #[arg(long)]
         force: bool,
     },
-    /// Regenerate the Caddy browse template from the shared render templates.
-    #[command(name = "gen-browse")]
-    GenBrowse {
-        /// Output path for the generated browse template.
-        #[arg(short = 'o', long = "out")]
-        out: PathBuf,
-    },
     /// Capture static screenshot previews for a bag.
     Preview {
         /// Optional app name to preview instead of the whole bag.
@@ -173,11 +165,6 @@ fn run() -> Result<()> {
         Command::Domain { hostname, bag } => {
             let cfg = Config::load()?;
             attach_domain(cfg.bag(&bag)?, &hostname)
-        }
-        Command::GenBrowse { out } => {
-            generate_browse_template(&out)?;
-            println!("✓ wrote {}", out.display());
-            Ok(())
         }
         Command::Preview {
             app,

@@ -1,3 +1,59 @@
+## 2026-06-19
+
+### Remove Browse Mode
+
+Removed:
+- `browse` as a supported `indexMode`.
+- The `webby gen-browse` CLI command.
+- The Caddy browse template and its render tests.
+- The Justfile recipe for regenerating `browse.html`.
+
+Modified:
+- Caddy-hosted bags now default to normal `page` output unless configured as `manifest-only`.
+- `browse.html` is no longer reserved or cleaned up; it behaves like any other standalone HTML app.
+
+Why:
+- The current homeserver homepage consumes `webby-cards.json`; Webby should not carry a Caddy directory-listing integration as a first-class mode.
+
+### Shared Card Grid Web Component
+
+Added:
+- `templates/webby-card-grid.js`, a self-contained `<webby-card-grid>` custom element with bundled Webby card styles.
+- `src/cards.rs`, which normalizes Webby `AppEntry` values into reusable card data.
+
+Modified:
+- Generated Webby indexes now embed card JSON and let `<webby-card-grid>` render the cards.
+- Bag generation writes `webby-card-grid.js` next to generated assets.
+
+Why:
+- Card presentation should be reusable across generated Webby pages and homeserver pages without copying card markup and CSS.
+
+### Stable Card Width Layout
+
+Added:
+- Optional `stable-card-width` mode for `<webby-card-grid>`.
+- `--webby-card-stable-width` custom property for pages that want dense rows to avoid card-width snapping at responsive breakpoints.
+
+Modified:
+- The component now runs a resize-aware layout pass in stable mode: dense categories keep stable card widths and distribute extra width into gaps; sparse categories fill available width until the configured max card width.
+
+Why:
+- CSS Grid `repeat(auto-fit, minmax(..., 1fr))` makes cards grow continuously and then snap smaller when an additional column fits. The homepage should keep row coverage without that card-size snap.
+
+### Card Manifest Output
+
+Added:
+- `webby-cards.json` generation for every bag deploy.
+- Bag `indexMode` config with `page` and `manifest-only`.
+- Integration tests for `manifest-only` and skipped metadata folders.
+
+Modified:
+- All bags default to `page` unless configured as `manifest-only`.
+- Directory staging skips `.git`, `.wrangler`, `.DS_Store`, `node_modules`, and `logs`.
+
+Why:
+- A host homepage can now consume Webby cards as data and render them in its own UI without keeping a separate Webby listing page.
+
 ## 2026-06-18
 
 ### Crates.io Package Metadata
