@@ -1,0 +1,1513 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transcript Reflow Tool</title>
+  <style>
+    :root {
+      --bg: #f5f4ef;
+      --panel: #fffef8;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --line: #d1d5db;
+      --accent: #2563eb;
+      --accent-2: #0f766e;
+      --warn: #b45309;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 700px at 10% -10%, #e0ecff 0%, transparent 65%),
+        radial-gradient(900px 600px at 100% 0%, #d7f5f0 0%, transparent 58%),
+        var(--bg);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 24px auto 48px;
+      padding: 0 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+      min-width: 0;
+      overflow: hidden;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.3rem;
+      letter-spacing: 0.02em;
+    }
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 10px;
+      align-items: end;
+    }
+    .field { display: grid; gap: 6px; }
+    .field label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    input[type="text"],
+    input[type="password"],
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 8px 10px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+    textarea {
+      min-height: 260px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      line-height: 1.4;
+    }
+    .small {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin: 0;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 0.92rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.primary {
+      background: var(--accent);
+      color: white;
+    }
+    button.alt {
+      background: #ecfeff;
+      border-color: #99f6e4;
+      color: var(--accent-2);
+    }
+    button.ghost {
+      background: #fff;
+      border-color: var(--line);
+      color: var(--ink);
+    }
+    .status {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #fed7aa;
+      background: #fffbeb;
+      color: var(--warn);
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      min-height: 44px;
+    }
+    .statline {
+      margin: 0;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    .cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .cols > * {
+      min-width: 0;
+    }
+    .toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      padding: 4px 0 2px;
+    }
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: var(--ink);
+    }
+    .toggle input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .diff-wrap {
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .diff-summary {
+      margin: 0;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      background: #fafaf9;
+    }
+    .diff-text {
+      margin: 0;
+      padding: 10px;
+      max-height: 300px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-size: 0.8rem;
+      line-height: 1.35;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    @media (max-width: 980px) {
+      .cols { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <h1>Transcript Reflow Tool (Single HTML)</h1>
+      <p class="sub">Apply optional transcript transforms: subtitle-to-text, paragraph reflow, and merged-word splitting fixes.</p>
+    </section>
+
+    <section class="panel">
+      <div class="grid">
+        <div class="field" style="grid-column: span 6;">
+          <label for="fileInput">Input File (.vtt, .srt, .md, .txt)</label>
+          <input id="fileInput" type="file" accept=".vtt,.srt,.md,.txt,text/plain">
+        </div>
+        <div class="field" style="grid-column: span 3;">
+          <label for="mode">Mode</label>
+          <select id="mode">
+            <option value="nlp" selected>NLP (Recommended)</option>
+            <option value="basic">Basic Heuristics</option>
+            <option value="llm">LLM (API Key Required)</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column: span 3;">
+          <label for="llmModel">LLM Model</label>
+          <input id="llmModel" type="text" value="gpt-4.1-mini" placeholder="gpt-4.1-mini">
+        </div>
+
+        <div class="field" style="grid-column: span 6;">
+          <label for="apiBaseUrl">AI Provider URL</label>
+          <input id="apiBaseUrl" type="text" value="https://api.openai.com/v1/chat/completions" placeholder="https://api.example.com/v1/chat/completions">
+        </div>
+        <div class="field" style="grid-column: span 3;">
+          <label for="apiKey">API Key (used only for LLM mode, not stored)</label>
+          <input id="apiKey" type="password" placeholder="API key">
+        </div>
+        <div class="field" style="grid-column: span 3;">
+          <label for="outputName">Output Filename</label>
+          <input id="outputName" type="text" value="output.md">
+        </div>
+
+        <div class="field" style="grid-column: span 12;">
+          <label>Transformations (apply in order)</label>
+          <div class="toggles">
+            <label class="toggle" for="transformSubtitle">
+              <input id="transformSubtitle" type="checkbox" checked>
+              <span>Convert VTT/SRT to text</span>
+            </label>
+            <label class="toggle" for="transformReflow">
+              <input id="transformReflow" type="checkbox" checked>
+              <span>Reflow into paragraphs</span>
+            </label>
+            <label class="toggle" for="transformWordSplit">
+              <input id="transformWordSplit" type="checkbox" checked>
+              <span>Fix merged words</span>
+            </label>
+            <label class="toggle" for="transformPunctuation">
+              <input id="transformPunctuation" type="checkbox" checked>
+              <span>Normalize punctuation spacing</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <p class="small">You can upload a file or paste text below. If both exist, the uploaded file is used.</p>
+    </section>
+
+    <section class="panel cols">
+      <div>
+        <div class="field">
+          <label for="inputText">Input Text</label>
+          <textarea id="inputText" placeholder="Paste raw transcript or subtitles here..."></textarea>
+        </div>
+      </div>
+      <div>
+        <div class="field">
+          <label for="outputText">Output Text</label>
+          <textarea id="outputText" placeholder="Processed output appears here..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="actions">
+        <button id="processBtn" class="primary">Process</button>
+        <button id="downloadBtn" class="alt">Download Output</button>
+        <button id="copyBtn" class="ghost">Copy Output</button>
+        <button id="swapBtn" class="ghost">Use Output As Input</button>
+      </div>
+      <p id="stats" class="statline">stats: idle</p>
+      <div id="status" class="status">Ready.</div>
+    </section>
+
+    <section class="panel">
+      <details id="diffDetails">
+        <summary>Changes Diff (Input -> Output)</summary>
+        <div class="diff-wrap">
+          <p id="diffSummary" class="diff-summary">Diff not generated yet.</p>
+          <pre id="diffText" class="diff-text">(run Process to generate diff)</pre>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <script>
+    const TIME_RE = String.raw`(?:\d{2}:)?\d{2}:\d{2}[.,]\d{3}`;
+    const TIMESTAMP_CUE_RE = new RegExp(
+      String.raw`(?:^|\s)(?:\d+\s+)?(${TIME_RE})\s*-->\s*(${TIME_RE})(?:\s+\S+:[^\s]+)*`,
+      "g"
+    );
+    const TAG_RE = /<[^>]+>/g;
+    const SENTENCE_SPLIT_RE = /(?<=[.!?])\s+/;
+    const SENTENCE_END_RE = /[.!?]["')\]]*$/;
+    const WORD_RE = /[a-z0-9']+/g;
+
+    const TRANSITION_MARKERS = [
+      "okay", "so ", "so,", "now ", "next", "first", "second", "third", "let's ",
+      "welcome", "all right", "alright", "but ", "and then", "moving on", "question",
+      "lastly", "finally", "to recap", "in summary"
+    ];
+
+    const STOPWORDS = new Set([
+      "a","an","and","are","as","at","be","but","by","for","from","how","i","if","in","into",
+      "is","it","its","of","on","or","our","so","that","the","their","them","there","these",
+      "they","this","to","was","we","what","when","where","which","who","with","you","your"
+    ]);
+
+    const MERGED_WORD_FIXES = {
+      "aboutafter": "about after",
+      "actuallyincreases": "actually increases",
+      "alwayshaving": "always having",
+      "andoverwhelmed": "and overwhelmed",
+      "andtreatment": "and treatment",
+      "aroundseven": "around seven",
+      "associationwith": "association with",
+      "becauseprogramming": "because programming",
+      "braincompensates": "brain compensates",
+      "canaccelerate": "can accelerate",
+      "challengesthat": "challenges that",
+      "challengingbecause": "challenging because",
+      "coachingand": "coaching and",
+      "cognitivebursts": "cognitive bursts",
+      "comfortablewith": "comfortable with",
+      "comingfrom": "coming from",
+      "completethem": "complete them",
+      "conclusionsabout": "conclusions about",
+      "createshealth": "creates health",
+      "depressedbecause": "depressed because",
+      "difficultiescan": "difficulties can",
+      "difficultiesyou": "difficulties you",
+      "difficultyand": "difficulty and",
+      "dischargesummary": "discharge summary",
+      "dispatchersthat": "dispatchers that",
+      "distractibilityconsiderations": "distractibility considerations",
+      "distresstolerance": "distress tolerance",
+      "distributionwhere": "distribution where",
+      "doctorsand": "doctors and",
+      "donecompensating": "done compensating",
+      "effortfrom": "effort from",
+      "emotionalcircuitry": "emotional circuitry",
+      "excellentmodeling": "excellent modeling",
+      "experiencesand": "experiences and",
+      "experiencework": "experience work",
+      "firetogether": "fire together",
+      "fiveprogrammers": "five programmers",
+      "forempathy": "for empathy",
+      "fromexercise": "from exercise",
+      "frustratedtelling": "frustrated telling",
+      "generatequests": "generate quests",
+      "gettinginput": "getting input",
+      "goodgenerally": "good generally",
+      "helpfulaccommodations": "helpful accommodations",
+      "hundredwells": "hundred wells",
+      "imperfectbetter": "imperfect better",
+      "inducesinaction": "induces inaction",
+      "interactionsis": "interactions is",
+      "internalbiological": "internal biological",
+      "likeoftentimes": "like oftentimes",
+      "longerwhen": "longer when",
+      "maintainfocus": "maintain focus",
+      "maintainingfocus": "maintaining focus",
+      "makebecause": "make because",
+      "measurethat": "measure that",
+      "meetpeople": "meet people",
+      "morehyperactive": "more hyperactive",
+      "mostdistracting": "most distracting",
+      "necessitatesthat": "necessitates that",
+      "nervoussystem": "nervous system",
+      "notinanimate": "not inanimate",
+      "particularpeople": "particular people",
+      "payattention": "pay attention",
+      "peopleactually": "people actually",
+      "persontriggered": "person triggered",
+      "rageinducing": "rage inducing",
+      "rarelybecomes": "rarely becomes",
+      "reallyaccessible": "really accessible",
+      "reallyawesome": "really awesome",
+      "requiresenergy": "requires energy",
+      "resilientpeople": "resilient people",
+      "samethings": "same things",
+      "sensebecause": "sense because",
+      "sleepcircadian": "sleep circadian",
+      "socialthings": "social things",
+      "solutionswhen": "solutions when",
+      "someoneforgot": "someone forgot",
+      "somethingserious": "something serious",
+      "strugglewith": "struggle with",
+      "summarywhen": "summary when",
+      "suppressingthose": "suppressing those",
+      "sympatheticnervous": "sympathetic nervous",
+      "taskswitching": "task switching",
+      "thatgenerally": "that generally",
+      "thedistress": "the distress",
+      "theinterview": "the interview",
+      "theircapacity": "their capacity",
+      "theirinternal": "their internal",
+      "themorning": "the morning",
+      "themrequire": "them require",
+      "thequestion": "the question",
+      "theworkplace": "the workplace",
+      "thingsthat": "things that",
+      "throughcan": "through can",
+      "towelfeels": "towel feels",
+      "tryingbasically": "trying basically",
+      "twoneurons": "two neurons",
+      "understandthe": "understand the",
+      "understandwhat": "understand what",
+      "verycausative": "very causative",
+      "watchingand": "watching and",
+      "whatcauses": "what causes",
+      "whenaccommodations": "when accommodations",
+      "wildbecause": "wild because",
+      "willexperience": "will experience",
+      "withgetting": "with getting",
+      "withsomeone": "with someone",
+      "youliterally": "you literally",
+      "yourfrontal": "your frontal",
+      "yourselfwhen": "yourself when",
+      "yoursympathetic": "your sympathetic",
+      "yourworkplace": "your workplace",
+      "yousucceed": "you succeed",
+      "adepressive": "a depressive",
+      "allcortisol": "all cortisol",
+      "aneurotypical": "a neurotypical",
+      "asignificant": "a significant",
+      "attentionto": "attention to",
+      "isstillness": "is stillness",
+      "itunrelated": "it unrelated",
+      "meetingsor": "meetings or",
+      "mysuperiors": "my superiors",
+      "negativelyto": "negatively to",
+      "neurotypicalpeople": "neurotypical people",
+      "neurotypicalperson": "neurotypical person",
+      "noadvantage": "no advantage",
+      "ofexecutive": "of executive",
+      "ofhyperfocus": "of hyperfocus",
+      "ofpeoplerehabbing": "of people rehabbing",
+      "orneuroscience": "or neuroscience",
+      "orworkplace": "or workplace",
+      "phenomenonin": "phenomenon in",
+      "stopwatchto": "stopwatch to",
+      "tohabituate": "to habituate",
+      "topractice": "to practice",
+      "limbicsystem": "limbic system",
+      "aboutis": "about is",
+      "adhdand": "adhd and",
+      "andour": "and our",
+      "andyou": "and you",
+      "areand": "are and",
+      "asyour": "as your",
+      "asystem": "a system",
+      "awayfrom": "away from",
+      "becausei": "because i",
+      "becausewe": "because we",
+      "bitabout": "bit about",
+      "butthis": "but this",
+      "coupleof": "couple of",
+      "developa": "develop a",
+      "dothis": "do this",
+      "dowith": "do with",
+      "downthe": "down the",
+      "focuson": "focus on",
+      "foryou": "for you",
+      "goingon": "going on",
+      "hardand": "hard and",
+      "helpsyour": "helps your",
+      "hereand": "here and",
+      "herethat": "here that",
+      "howyou": "how you",
+      "ifthat": "if that",
+      "ifthere": "if there",
+      "inthings": "in things",
+      "isjust": "is just",
+      "islike": "is like",
+      "isvery": "is very",
+      "kindof": "kind of",
+      "leveledup": "leveled up",
+      "likethat": "like that",
+      "liketo": "like to",
+      "longit": "long it",
+      "offthe": "off the",
+      "onthis": "on this",
+      "orfailure": "or failure",
+      "orother": "or other",
+      "oryour": "or your",
+      "overto": "over to",
+      "shamethat": "shame that",
+      "showingup": "showing up",
+      "stufflike": "stuff like",
+      "thatit": "that it",
+      "thatyou": "that you",
+      "thebrain": "the brain",
+      "themore": "the more",
+      "thepast": "the past",
+      "theright": "the right",
+      "thesetwo": "these two",
+      "thisstuff": "this stuff",
+      "thiswith": "this with",
+      "todeal": "to deal",
+      "tokeep": "to keep",
+      "towork": "to work",
+      "whatis": "what is",
+      "whereall": "where all",
+      "wherethis": "where this",
+      "whichis": "which is",
+      "willbe": "will be",
+      "withyou": "with you",
+      "workmore": "work more",
+      "youfrom": "you from",
+      "yourjob": "your job",
+      "actionas": "action as",
+      "arguingon": "arguing on",
+      "beconcise": "be concise",
+      "bestwith": "best with",
+      "bodythat": "body that",
+      "canimpair": "can impair",
+      "causedme": "caused me",
+      "chatwhere": "chat where",
+      "codetill": "code till",
+      "iideally": "i ideally",
+      "makingthe": "making the",
+      "managedor": "managed or",
+      "meaningof": "meaning of",
+      "moretired": "more tired",
+      "ofhaving": "of having",
+      "orhiding": "or hiding",
+      "orquality": "or quality",
+      "overagain": "over again",
+      "slidoand": "slido and",
+      "thetasks": "the tasks",
+      "thisright": "this right",
+      "timethey": "time they",
+      "toweland": "towel and",
+      "whileand": "while and",
+      "worksthe": "works the",
+      "wouldcall": "would call",
+      "wouldhelp": "would help",
+      "yourtasks": "your tasks",
+      "youshowed": "you showed",
+      "allall": "all all",
+      "ofwhen": "of when",
+      "thingin": "thing in",
+      "orbrain": "or brain",
+      "lifeand": "life and",
+      "ithard": "it hard",
+      "twomost": "two most",
+      "thesort": "the sort"
+};
+    const MERGED_WORD_FIX_PATTERNS = Object.entries(MERGED_WORD_FIXES).map(([token, corrected]) => ({
+      corrected,
+      regex: new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi")
+    }));
+    const DICTIONARY_URL = "./english-dictionary.txt";
+    let dictionaryPromise = null;
+    const FUNCTION_WORDS = new Set([
+      "a","an","and","are","as","at","be","been","being","but","by","for","from","how","i","if","in","into",
+      "is","it","its","of","on","or","our","so","that","the","their","them","there","these","this","those","to",
+      "was","we","what","when","where","which","who","with","you","your","my","me","us","they","he","she",
+      "do","does","did","can","could","will","would","should","not","no","all","up","out","then","now"
+    ]);
+    const PREFIX_PENALTY = new Set([
+      "re","co","un","mis","non","pre","post","sub","super","hyper","neuro","para","anti","over","under","trans"
+    ]);
+    const DOMAIN_TERMS = new Set([
+      "adhd","neurotypical","dopaminergic","attentional","hyperfocus","hypervigilant","notetaking",
+      "undertreated","unmedicated","supersocial","parasympathetic","parasympathetically","decoupling",
+      "cognitively","distractibility","distractible","impulsivity","externalize","introspect","skillset"
+    ]);
+
+    const fileInput = document.getElementById("fileInput");
+    const inputText = document.getElementById("inputText");
+    const outputText = document.getElementById("outputText");
+    const outputName = document.getElementById("outputName");
+    const mode = document.getElementById("mode");
+    const llmModel = document.getElementById("llmModel");
+    const apiBaseUrl = document.getElementById("apiBaseUrl");
+    const apiKey = document.getElementById("apiKey");
+    const processBtn = document.getElementById("processBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const swapBtn = document.getElementById("swapBtn");
+    const transformSubtitle = document.getElementById("transformSubtitle");
+    const transformReflow = document.getElementById("transformReflow");
+    const transformWordSplit = document.getElementById("transformWordSplit");
+    const transformPunctuation = document.getElementById("transformPunctuation");
+    const stats = document.getElementById("stats");
+    const status = document.getElementById("status");
+    const diffDetails = document.getElementById("diffDetails");
+    const diffSummary = document.getElementById("diffSummary");
+    const diffText = document.getElementById("diffText");
+
+    function setStatus(msg, isError = false) {
+      status.textContent = msg;
+      status.style.borderColor = isError ? "#fca5a5" : "#fed7aa";
+      status.style.background = isError ? "#fef2f2" : "#fffbeb";
+      status.style.color = isError ? "#991b1b" : "#b45309";
+    }
+
+    function normalizeSpaces(text) {
+      return text.replace(/\s+/g, " ").trim();
+    }
+
+    function normalizePunctuationSpacing(text) {
+      let t = text;
+      t = t.replace(/\s+([,.;:?!])/g, "$1");
+      t = t.replace(/([([{"'])\s+/g, "$1");
+      t = t.replace(/\s+([)\]}"'])/g, "$1");
+      return normalizeSpaces(t);
+    }
+
+    function parseTimestampToSeconds(value) {
+      const cleaned = value.replace(",", ".");
+      const parts = cleaned.split(":");
+      try {
+        if (parts.length === 2) {
+          const mins = Number(parts[0]);
+          const secs = Number(parts[1]);
+          return mins * 60 + secs;
+        }
+        if (parts.length === 3) {
+          const hours = Number(parts[0]);
+          const mins = Number(parts[1]);
+          const secs = Number(parts[2]);
+          return hours * 3600 + mins * 60 + secs;
+        }
+      } catch (_) {
+        return null;
+      }
+      return null;
+    }
+
+    function isSubtitleInput(filename, text) {
+      const lower = (filename || "").toLowerCase();
+      return lower.endsWith(".vtt") || lower.endsWith(".srt") || text.includes("-->") || text.slice(0, 200).toUpperCase().includes("WEBVTT");
+    }
+
+    function defaultOutputFilename(filename, reflowEnabled = true) {
+      if (!filename) return reflowEnabled ? "output.md" : "output.txt";
+      const idx = filename.lastIndexOf(".");
+      const stem = idx >= 0 ? filename.slice(0, idx) : filename;
+      const ext = idx >= 0 ? filename.slice(idx).toLowerCase() : "";
+      if (reflowEnabled) {
+        if (ext === ".md") return `${stem}.reflowed.md`;
+        return `${stem}.md`;
+      }
+      return `${stem}.txt`;
+    }
+
+    function stripSubtitleBlocks(text) {
+      const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
+      let inBlock = false;
+      const keep = [];
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) {
+          inBlock = false;
+          keep.push("");
+          continue;
+        }
+        const upper = line.toUpperCase();
+        if (upper.startsWith("WEBVTT")) continue;
+        if (upper.startsWith("NOTE") || upper === "STYLE" || upper === "REGION") {
+          inBlock = true;
+          continue;
+        }
+        if (inBlock) continue;
+        keep.push(raw);
+      }
+      return keep.join("\n");
+    }
+
+    function cleanSubtitlePayload(payload) {
+      let t = payload;
+      t = t.replace(TAG_RE, "");
+      t = t.replace(/^\s*\d+\s*$/gm, " ");
+      t = t.replace(/\s+/g, " ");
+      return normalizePunctuationSpacing(t);
+    }
+
+    function extractSubtitleCues(text) {
+      const base = stripSubtitleBlocks(text);
+      const matches = [...base.matchAll(TIMESTAMP_CUE_RE)];
+      if (matches.length === 0) return [];
+
+      const cues = [];
+      let prevEnd = null;
+      for (let i = 0; i < matches.length; i++) {
+        const m = matches[i];
+        const startRaw = m[1];
+        const endRaw = m[2];
+        const full = m[0] || "";
+        const mIndex = m.index || 0;
+        const cueStart = mIndex + full.length;
+        const cueEnd = i + 1 < matches.length ? (matches[i + 1].index || base.length) : base.length;
+        const payload = cleanSubtitlePayload(base.slice(cueStart, cueEnd));
+        const start = parseTimestampToSeconds(startRaw);
+        const end = parseTimestampToSeconds(endRaw);
+        if (!payload) {
+          prevEnd = end != null ? end : prevEnd;
+          continue;
+        }
+        let gapBefore = 0;
+        if (start != null && prevEnd != null) gapBefore = Math.max(0, start - prevEnd);
+        cues.push({ text: payload, start, end, gapBefore });
+        prevEnd = end != null ? end : prevEnd;
+      }
+      return cues;
+    }
+
+    function splitCompleteSentences(buffer) {
+      const normalized = normalizePunctuationSpacing(buffer);
+      if (!normalized) return { complete: [], remainder: "" };
+      const parts = normalized.split(SENTENCE_SPLIT_RE);
+      if (!parts.length) return { complete: [], remainder: "" };
+      if (SENTENCE_END_RE.test(normalized)) {
+        return { complete: parts.map(s => s.trim()).filter(Boolean), remainder: "" };
+      }
+      return {
+        complete: parts.slice(0, -1).map(s => s.trim()).filter(Boolean),
+        remainder: (parts[parts.length - 1] || "").trim()
+      };
+    }
+
+    function sentenceUnitsFromSubtitles(text) {
+      const cues = extractSubtitleCues(text);
+      if (!cues.length) return sentenceUnitsFromPlainText(text);
+
+      const units = [];
+      let buffer = "";
+      let bufferGap = 0;
+
+      for (const cue of cues) {
+        if (!buffer) {
+          buffer = cue.text;
+          bufferGap = cue.gapBefore;
+        } else {
+          buffer = `${buffer} ${cue.text}`;
+        }
+        const { complete, remainder } = splitCompleteSentences(buffer);
+        complete.forEach((sentence, idx) => {
+          units.push({ text: sentence, gapBefore: idx === 0 ? bufferGap : 0 });
+          if (idx === 0) bufferGap = 0;
+        });
+        buffer = remainder;
+      }
+      if (buffer) units.push({ text: buffer, gapBefore: bufferGap });
+
+      const compact = [];
+      for (const unit of units) {
+        if (compact.length && /^[0-9]{1,3}$/.test(unit.text)) {
+          compact[compact.length - 1].text += ` ${unit.text}`;
+        } else {
+          compact.push(unit);
+        }
+      }
+      return compact;
+    }
+
+    function convertSubtitlesToText(text) {
+      const cues = extractSubtitleCues(text);
+      if (cues.length) {
+        return normalizePunctuationSpacing(cues.map(c => c.text).join(" "));
+      }
+      const stripped = stripSubtitleBlocks(text)
+        .replace(TAG_RE, " ")
+        .replace(TIMESTAMP_CUE_RE, " ")
+        .replace(/^\s*\d+\s*$/gm, " ");
+      return normalizePunctuationSpacing(stripped);
+    }
+
+    function sentenceUnitsFromPlainText(text) {
+      const lines = text.split(/\r?\n/).map(l => normalizeSpaces(l)).filter(Boolean);
+      const joined = normalizePunctuationSpacing(lines.join(" "));
+      const parts = joined.split(SENTENCE_SPLIT_RE).map(p => normalizeSpaces(p)).filter(Boolean);
+      const units = [];
+      for (const p of parts) {
+        if (units.length && /^[0-9]{1,3}$/.test(p)) {
+          units[units.length - 1].text += ` ${p}`;
+          continue;
+        }
+        units.push({ text: p, gapBefore: 0 });
+      }
+      return units;
+    }
+
+    function isTransitionStart(sentence) {
+      return TRANSITION_MARKERS.some(prefix => sentence.toLowerCase().trim().startsWith(prefix));
+    }
+
+    function paragraphizeBasic(units) {
+      const paragraphs = [];
+      let current = [];
+      let chars = 0;
+
+      for (const unit of units) {
+        const sentence = unit.text;
+        let forceBreak = false;
+        if (current.length) {
+          if (current.length >= 6 || chars >= 900) forceBreak = true;
+          else if (current.length >= 3 && isTransitionStart(sentence)) forceBreak = true;
+        }
+        if (forceBreak) {
+          paragraphs.push(current.join(" ").trim());
+          current = [];
+          chars = 0;
+        }
+        current.push(sentence);
+        chars += sentence.length + 1;
+      }
+      if (current.length) paragraphs.push(current.join(" ").trim());
+      return paragraphs;
+    }
+
+    function lexicalTokens(sentence) {
+      const words = (sentence.toLowerCase().match(WORD_RE) || []);
+      return new Set(words.filter(w => w.length > 2 && !STOPWORDS.has(w)));
+    }
+
+    function lexicalShift(tokenSets, idx, window = 3) {
+      const left = new Set();
+      const right = new Set();
+      for (let i = Math.max(0, idx - window); i < idx; i++) tokenSets[i].forEach(x => left.add(x));
+      for (let i = idx; i < Math.min(tokenSets.length, idx + window); i++) tokenSets[i].forEach(x => right.add(x));
+      const union = new Set([...left, ...right]);
+      if (!union.size) return 0;
+      let intersection = 0;
+      left.forEach(x => { if (right.has(x)) intersection++; });
+      const similarity = intersection / union.size;
+      return 1 - similarity;
+    }
+
+    function boundaryBreakScore(units, sentences, tokenSets, idx) {
+      const prev = sentences[idx - 1].trim();
+      const next = sentences[idx].trim();
+      const nextLower = next.toLowerCase();
+      let score = 0;
+      score += lexicalShift(tokenSets, idx, 3) * 2.0;
+
+      const gap = units[idx].gapBefore || 0;
+      if (gap >= 3.0) score += 1.2;
+      else if (gap >= 1.5) score += 0.7;
+      else if (gap >= 0.8) score += 0.3;
+
+      if (isTransitionStart(next)) score += 0.9;
+      if (/^(and |or |because |which |that )/.test(nextLower)) score -= 0.35;
+      if (prev.endsWith(":")) score -= 0.4;
+      return score;
+    }
+
+    function paragraphizeNlp(units) {
+      if (!units.length) return [];
+      const sentences = units.map(u => u.text);
+      const tokenSets = sentences.map(lexicalTokens);
+
+      const paragraphs = [];
+      let current = [sentences[0]];
+      let chars = sentences[0].length;
+
+      for (let i = 1; i < sentences.length; i++) {
+        const score = boundaryBreakScore(units, sentences, tokenSets, i);
+        let forceBreak = false;
+        if (current.length >= 9 || chars >= 1300) forceBreak = true;
+        else if (current.length >= 3 && chars >= 220 && score >= 2.15) forceBreak = true;
+        else if (current.length >= 6 && score >= 1.65) forceBreak = true;
+
+        if (forceBreak) {
+          paragraphs.push(current.join(" ").trim());
+          current = [];
+          chars = 0;
+        }
+        current.push(sentences[i]);
+        chars += sentences[i].length + 1;
+      }
+      if (current.length) paragraphs.push(current.join(" ").trim());
+      return paragraphs;
+    }
+
+    function parseBreakAfterIndices(content, maxValue) {
+      let parsed;
+      try {
+        parsed = JSON.parse(content);
+      } catch (_) {
+        const m = content.match(/\{[\s\S]*\}/);
+        if (!m) return [];
+        try {
+          parsed = JSON.parse(m[0]);
+        } catch (_) {
+          return [];
+        }
+      }
+      const raw = Array.isArray(parsed.break_after) ? parsed.break_after : [];
+      const out = [];
+      const seen = new Set();
+      for (const v of raw) {
+        if (!Number.isInteger(v)) continue;
+        if (v < 1 || v > maxValue) continue;
+        if (!seen.has(v)) {
+          seen.add(v);
+          out.push(v);
+        }
+      }
+      return out;
+    }
+
+    function normalizeProviderUrl(urlValue) {
+      const trimmed = (urlValue || "").trim();
+      if (!trimmed) throw new Error("LLM mode requires an AI provider URL.");
+      let parsed;
+      try {
+        parsed = new URL(trimmed);
+      } catch (_) {
+        throw new Error("AI provider URL must be a valid http(s) URL.");
+      }
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        throw new Error("AI provider URL must use http or https.");
+      }
+      return parsed.toString();
+    }
+
+    async function requestLlmBreaks(chunkSentences, model, providerUrl, apiKeyValue) {
+      const numbered = chunkSentences.map((s, i) => `${i + 1}. ${s}`).join("\n");
+      const prompt = [
+        "Place paragraph breaks for this transcript. Preserve sentence order.",
+        "Rules:",
+        "- Break when topic shifts or discourse transitions occur.",
+        "- Keep paragraphs roughly 3-9 sentences.",
+        "- Prefer not to break after sentence 1 unless clearly needed.",
+        "- Output strict JSON only: {\"break_after\":[...]} where each number is a 1-based sentence index after which a paragraph ends.",
+        "",
+        "Sentences:",
+        numbered
+      ].join("\n");
+
+      const payload = {
+        model,
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: "You segment transcripts into coherent paragraphs." },
+          { role: "user", content: prompt }
+        ]
+      };
+
+      const resp = await fetch(providerUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKeyValue}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok) {
+        const detail = await resp.text();
+        throw new Error(`LLM request failed: HTTP ${resp.status}: ${detail}`);
+      }
+      const data = await resp.json();
+      const content = data?.choices?.[0]?.message?.content || "";
+      return parseBreakAfterIndices(content, Math.max(1, chunkSentences.length - 1));
+    }
+
+    async function paragraphizeLlm(units, model, providerUrl, apiKeyValue, setProgress) {
+      const sentences = units.map(u => u.text);
+      if (!sentences.length) return [];
+      const chunkSize = 180;
+      const breakAfterGlobal = [];
+      for (let start = 0; start < sentences.length; start += chunkSize) {
+        const end = Math.min(sentences.length, start + chunkSize);
+        const chunk = sentences.slice(start, end);
+        setProgress(`LLM mode: chunk ${Math.floor(start / chunkSize) + 1}/${Math.ceil(sentences.length / chunkSize)}...`);
+        const breaks = await requestLlmBreaks(chunk, model, providerUrl, apiKeyValue);
+        for (const localIdx of breaks) {
+          const globalIdx = start + localIdx;
+          if (globalIdx < sentences.length) breakAfterGlobal.push(globalIdx);
+        }
+      }
+      const breakSet = new Set(breakAfterGlobal);
+      const paragraphs = [];
+      let current = [];
+      for (let i = 0; i < sentences.length; i++) {
+        current.push(sentences[i]);
+        if (breakSet.has(i + 1)) {
+          paragraphs.push(current.join(" ").trim());
+          current = [];
+        }
+      }
+      if (current.length) paragraphs.push(current.join(" ").trim());
+      return paragraphs;
+    }
+
+    function buildOutput(paragraphs) {
+      return paragraphs.join("\n\n").trim() + "\n";
+    }
+
+    function splitByTemplate(matched, corrected) {
+      const first = corrected.split(" ", 1)[0];
+      const idx = first.length;
+      return matched.slice(0, idx) + " " + matched.slice(idx);
+    }
+
+    function splitByIndex(matched, idx) {
+      return `${matched.slice(0, idx)} ${matched.slice(idx)}`;
+    }
+
+    async function loadDictionarySet() {
+      if (!dictionaryPromise) {
+        dictionaryPromise = fetch(DICTIONARY_URL, { cache: "force-cache" })
+          .then((resp) => (resp.ok ? resp.text() : null))
+          .then((body) => {
+            if (!body) return null;
+            const set = new Set();
+            for (const raw of body.split(/\r?\n/)) {
+              const w = raw.trim().toLowerCase();
+              if (/^[a-z]{1,}$/.test(w)) set.add(w);
+            }
+            return set.size ? set : null;
+          })
+          .catch(() => null);
+      }
+      return dictionaryPromise;
+    }
+
+    function buildTokenStats(text) {
+      const tokens = text.match(/[A-Za-z]+/g) || [];
+      const words = tokens.map((w) => w.toLowerCase());
+      const freq = new Map();
+      const bigrams = new Map();
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        freq.set(w, (freq.get(w) || 0) + 1);
+        if (i > 0) {
+          const key = `${words[i - 1]} ${w}`;
+          bigrams.set(key, (bigrams.get(key) || 0) + 1);
+        }
+      }
+      return { words, freq, bigrams };
+    }
+
+    function bestDictionarySplit(token, freq, bigrams, lexicon) {
+      if (token.length < 8) return null;
+      if (lexicon.has(token)) return null;
+
+      let best = null;
+      for (let i = 2; i <= token.length - 2; i++) {
+        const a = token.slice(0, i);
+        const b = token.slice(i);
+        const validA = lexicon.has(a) || FUNCTION_WORDS.has(a);
+        const validB = lexicon.has(b) || FUNCTION_WORDS.has(b);
+        if (!validA || !validB) continue;
+
+        const phrase = bigrams.get(`${a} ${b}`) || 0;
+        const countA = freq.get(a) || 0;
+        const countB = freq.get(b) || 0;
+        let score = phrase * 100 + Math.min(countA, countB);
+        if (FUNCTION_WORDS.has(a) || FUNCTION_WORDS.has(b)) score += 20;
+        if (PREFIX_PENALTY.has(a) && phrase === 0) score -= 25;
+        if (token.length >= 12) score += 5;
+
+        if (!best || score > best.score) {
+          best = { index: i, score, phrase };
+        }
+      }
+      if (!best) return null;
+      if (best.phrase >= 1 && best.score >= 25) return best;
+      if (best.score >= 135) return best;
+      return null;
+    }
+
+    function applyDictionarySplitFixes(text, dictionarySet) {
+      if (!dictionarySet) return { text, changes: 0, dictionaryLoaded: false };
+
+      const { freq, bigrams } = buildTokenStats(text);
+      const lexicon = new Set(dictionarySet);
+      FUNCTION_WORDS.forEach((w) => lexicon.add(w));
+      DOMAIN_TERMS.forEach((w) => lexicon.add(w));
+      for (const [w, c] of freq.entries()) {
+        if (c >= 2 && w.length >= 3) lexicon.add(w);
+      }
+
+      const candidates = new Set((text.match(/[A-Za-z]{8,}/g) || []).map((w) => w.toLowerCase()));
+      const plans = new Map();
+      for (const token of candidates) {
+        if (token.toUpperCase() === token) continue;
+        const best = bestDictionarySplit(token, freq, bigrams, lexicon);
+        if (best) plans.set(token, best.index);
+      }
+
+      if (!plans.size) return { text, changes: 0, dictionaryLoaded: true };
+
+      let out = text;
+      let changes = 0;
+      for (const [token, idx] of plans.entries()) {
+        const re = new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
+        out = out.replace(re, (matched) => {
+          changes += 1;
+          return splitByIndex(matched, idx);
+        });
+      }
+      return { text: out, changes, dictionaryLoaded: true };
+    }
+
+    async function applyMergedWordFixes(text) {
+      let out = text;
+      let changes = 0;
+
+      out = out.replace(
+        /\b([A-Za-z]+(?:'m|'re|'ve|'ll|'d|n't|'s))(?=[A-Za-z])/g,
+        (m, p1) => {
+          changes += 1;
+          return `${p1} `;
+        }
+      );
+      out = out.replace(
+        /([A-Za-z])(I'(?:m|d|ll|ve|re|s)\b)/g,
+        (m, p1, p2) => {
+          changes += 1;
+          return `${p1} ${p2}`;
+        }
+      );
+
+      for (const { corrected, regex } of MERGED_WORD_FIX_PATTERNS) {
+        out = out.replace(regex, (matched) => {
+          changes += 1;
+          return splitByTemplate(matched, corrected);
+        });
+      }
+
+      const dictionarySet = await loadDictionarySet();
+      const dictResult = applyDictionarySplitFixes(out, dictionarySet);
+      out = dictResult.text;
+      changes += dictResult.changes;
+
+      return {
+        text: out,
+        changes,
+        dictionaryLoaded: dictResult.dictionaryLoaded,
+        dictionaryChanges: dictResult.changes
+      };
+    }
+
+    function applyPunctuationSpacingPass(text) {
+      let changes = 0;
+      const lines = text.split(/\r?\n/);
+      const updated = lines.map((line) => {
+        let out = line;
+        out = out.replace(/\s+([,.!?])/g, (m, p1) => {
+          changes += 1;
+          return p1;
+        });
+        out = out.replace(/([,.!?])\s+(?=[A-Za-z])/g, (m, p1) => {
+          if (m === `${p1} `) return m;
+          changes += 1;
+          return `${p1} `;
+        });
+        out = out.replace(/([,.!?])(?=[A-Za-z])/g, (m, p1, idx, src) => {
+          const prev = idx > 0 ? src[idx - 1] : "";
+          const next = src[idx + 1] || "";
+          if ((p1 === "." || p1 === ",") && /[0-9]/.test(prev) && /[0-9]/.test(next)) {
+            return m;
+          }
+          changes += 1;
+          return `${p1} `;
+        });
+        return out;
+      });
+      return { text: updated.join("\n"), changes };
+    }
+
+    function normalizeLineEndings(text) {
+      return (text || "").replace(/\r\n?/g, "\n").replace(/\n$/, "");
+    }
+
+    function buildFastDiffOps(aLines, bLines) {
+      let start = 0;
+      while (start < aLines.length && start < bLines.length && aLines[start] === bLines[start]) start += 1;
+
+      let endA = aLines.length - 1;
+      let endB = bLines.length - 1;
+      while (endA >= start && endB >= start && aLines[endA] === bLines[endB]) {
+        endA -= 1;
+        endB -= 1;
+      }
+
+      const ops = [];
+      for (let i = 0; i < start; i++) ops.push({ type: "equal", text: aLines[i] });
+      for (let i = start; i <= endA; i++) ops.push({ type: "del", text: aLines[i] });
+      for (let i = start; i <= endB; i++) ops.push({ type: "add", text: bLines[i] });
+      for (let i = endA + 1; i < aLines.length; i++) ops.push({ type: "equal", text: aLines[i] });
+      return ops;
+    }
+
+    function buildLcsDiffOps(aLines, bLines) {
+      const n = aLines.length;
+      const m = bLines.length;
+      const dp = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+
+      for (let i = 1; i <= n; i++) {
+        const ai = aLines[i - 1];
+        const row = dp[i];
+        const prev = dp[i - 1];
+        for (let j = 1; j <= m; j++) {
+          if (ai === bLines[j - 1]) row[j] = prev[j - 1] + 1;
+          else row[j] = prev[j] >= row[j - 1] ? prev[j] : row[j - 1];
+        }
+      }
+
+      const rev = [];
+      let i = n;
+      let j = m;
+      while (i > 0 && j > 0) {
+        if (aLines[i - 1] === bLines[j - 1]) {
+          rev.push({ type: "equal", text: aLines[i - 1] });
+          i -= 1;
+          j -= 1;
+        } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+          rev.push({ type: "del", text: aLines[i - 1] });
+          i -= 1;
+        } else {
+          rev.push({ type: "add", text: bLines[j - 1] });
+          j -= 1;
+        }
+      }
+      while (i > 0) {
+        rev.push({ type: "del", text: aLines[i - 1] });
+        i -= 1;
+      }
+      while (j > 0) {
+        rev.push({ type: "add", text: bLines[j - 1] });
+        j -= 1;
+      }
+      return rev.reverse();
+    }
+
+    function buildDiffOps(aLines, bLines) {
+      if (!aLines.length && !bLines.length) return [];
+      const complexity = aLines.length * bLines.length;
+      if (aLines.length > 1400 || bLines.length > 1400 || complexity > 900000) {
+        return buildFastDiffOps(aLines, bLines);
+      }
+      return buildLcsDiffOps(aLines, bLines);
+    }
+
+    function collapseEqualRuns(ops, context = 3) {
+      const out = [];
+      let i = 0;
+      while (i < ops.length) {
+        if (ops[i].type !== "equal") {
+          out.push(ops[i]);
+          i += 1;
+          continue;
+        }
+        let j = i;
+        while (j < ops.length && ops[j].type === "equal") j += 1;
+        const runLength = j - i;
+        if (runLength <= context * 2) {
+          for (let k = i; k < j; k++) out.push(ops[k]);
+        } else {
+          for (let k = i; k < i + context; k++) out.push(ops[k]);
+          out.push({ type: "meta", text: `... ${runLength - context * 2} unchanged lines ...` });
+          for (let k = j - context; k < j; k++) out.push(ops[k]);
+        }
+        i = j;
+      }
+      return out;
+    }
+
+    function formatDiff(ops) {
+      const lines = [];
+      let oldLine = 1;
+      let newLine = 1;
+      let added = 0;
+      let removed = 0;
+
+      for (const op of ops) {
+        if (op.type === "meta") {
+          lines.push(`@@ ${op.text} @@`);
+          continue;
+        }
+        if (op.type === "equal") {
+          lines.push(`  ${String(oldLine).padStart(5)} ${String(newLine).padStart(5)} | ${op.text}`);
+          oldLine += 1;
+          newLine += 1;
+          continue;
+        }
+        if (op.type === "del") {
+          lines.push(`- ${String(oldLine).padStart(5)}       | ${op.text}`);
+          oldLine += 1;
+          removed += 1;
+          continue;
+        }
+        if (op.type === "add") {
+          lines.push(`+       ${String(newLine).padStart(5)} | ${op.text}`);
+          newLine += 1;
+          added += 1;
+        }
+      }
+      return { text: lines.join("\n"), added, removed };
+    }
+
+    function renderDiff(beforeText, afterText) {
+      const before = normalizeLineEndings(beforeText);
+      const after = normalizeLineEndings(afterText);
+      if (before === after) {
+        return {
+          summary: "No changes detected between input and output.",
+          body: "(input and output are identical)",
+          changed: false
+        };
+      }
+      const beforeLines = before.split("\n");
+      const afterLines = after.split("\n");
+      const rawOps = buildDiffOps(beforeLines, afterLines);
+      const collapsed = collapseEqualRuns(rawOps, 3);
+      const formatted = formatDiff(collapsed);
+      const summary =
+        `changed=yes old_lines=${beforeLines.length} new_lines=${afterLines.length} `
+        + `removed=${formatted.removed} added=${formatted.added}`;
+      return { summary, body: formatted.text || "(changes detected)", changed: true };
+    }
+
+    function updateReflowControlState() {
+      const enabled = transformReflow.checked;
+      mode.disabled = !enabled;
+      llmModel.disabled = !enabled;
+      apiBaseUrl.disabled = !enabled;
+      apiKey.disabled = !enabled;
+    }
+
+    async function getSourceText() {
+      if (fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        const text = await file.text();
+        return { text, filename: file.name };
+      }
+      return { text: inputText.value || "", filename: "" };
+    }
+
+    processBtn.addEventListener("click", async () => {
+      try {
+        setStatus("Processing...");
+        stats.textContent = "stats: running";
+        const { text, filename } = await getSourceText();
+        if (!text.trim()) {
+          setStatus("No input text found. Upload a file or paste text.", true);
+          return;
+        }
+
+        const subtitle = isSubtitleInput(filename, text);
+        const selectedMode = mode.value;
+        const applySubtitle = transformSubtitle.checked;
+        const applyReflow = transformReflow.checked;
+        const applyWordSplit = transformWordSplit.checked;
+        const applyPunctuation = transformPunctuation.checked;
+
+        let workingText = text;
+        let splitFixes = 0;
+        let dictSplitFixes = 0;
+        let dictionaryLoaded = false;
+        let punctuationChanges = 0;
+        let units = [];
+        let paragraphs = [];
+
+        if (applySubtitle && subtitle) {
+          workingText = convertSubtitlesToText(workingText);
+        }
+        if (applyWordSplit) {
+          const splitResult = await applyMergedWordFixes(workingText);
+          workingText = splitResult.text;
+          splitFixes = splitResult.changes;
+          dictSplitFixes = splitResult.dictionaryChanges || 0;
+          dictionaryLoaded = !!splitResult.dictionaryLoaded;
+        }
+        if (applyPunctuation) {
+          const punctuationResult = applyPunctuationSpacingPass(workingText);
+          workingText = punctuationResult.text;
+          punctuationChanges = punctuationResult.changes;
+        }
+
+        let out = workingText.trim();
+        if (applyReflow) {
+          units = sentenceUnitsFromPlainText(workingText);
+          if (!units.length) {
+            setStatus("No sentence units extracted. Check input format.", true);
+            return;
+          }
+
+          if (selectedMode === "basic") {
+            paragraphs = paragraphizeBasic(units);
+          } else if (selectedMode === "nlp") {
+            paragraphs = paragraphizeNlp(units);
+          } else if (selectedMode === "llm") {
+            if (!apiKey.value.trim()) {
+              setStatus("LLM mode requires an API key.", true);
+              return;
+            }
+            const providerUrl = normalizeProviderUrl(apiBaseUrl.value);
+            paragraphs = await paragraphizeLlm(
+              units,
+              llmModel.value.trim() || "gpt-4.1-mini",
+              providerUrl,
+              apiKey.value.trim(),
+              (msg) => setStatus(msg)
+            );
+          }
+          out = buildOutput(paragraphs);
+        } else if (out.length) {
+          out += "\n";
+        }
+
+        outputText.value = out;
+        const diff = renderDiff(text, out);
+        diffSummary.textContent = diff.summary;
+        diffText.textContent = diff.body;
+        diffDetails.open = diff.changed;
+
+        const outName = filename ? defaultOutputFilename(filename, applyReflow) : (applyReflow ? "output.md" : "output.txt");
+        if (!outputName.value || outputName.value === "output.md" || outputName.value === "output.txt") outputName.value = outName;
+        stats.textContent = (
+          "stats: "
+          + `subtitle_input=${subtitle} `
+          + `vtt_to_text=${applySubtitle && subtitle} `
+          + `reflow=${applyReflow} `
+          + `mode=${applyReflow ? selectedMode : "off"} `
+          + `word_split_fix=${applyWordSplit} `
+          + `split_changes=${splitFixes} `
+          + `dict_loaded=${dictionaryLoaded} `
+          + `dict_split_changes=${dictSplitFixes} `
+          + `punctuation_fix=${applyPunctuation} `
+          + `punctuation_changes=${punctuationChanges} `
+          + `sentences=${units.length} `
+          + `paragraphs=${paragraphs.length} `
+          + `chars=${out.length}`
+        );
+        setStatus("Done.");
+      } catch (err) {
+        setStatus(`Error: ${err.message || err}`, true);
+      }
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      const out = outputText.value || "";
+      if (!out.trim()) {
+        setStatus("No output to download.", true);
+        return;
+      }
+      const reflowOn = transformReflow.checked;
+      const defaultExt = reflowOn ? ".md" : ".txt";
+      const mime = reflowOn ? "text/markdown;charset=utf-8" : "text/plain;charset=utf-8";
+      const name = (outputName.value || `output${defaultExt}`).trim();
+      const blob = new Blob([out], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = /\.(md|txt)$/i.test(name) ? name : `${name}${defaultExt}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus(`Downloaded ${a.download}.`);
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      const out = outputText.value || "";
+      if (!out.trim()) {
+        setStatus("No output to copy.", true);
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(out);
+        setStatus("Output copied to clipboard.");
+      } catch (_) {
+        setStatus("Clipboard write failed. You can manually copy from output box.", true);
+      }
+    });
+
+    swapBtn.addEventListener("click", () => {
+      if (!outputText.value.trim()) {
+        setStatus("No output to reuse.", true);
+        return;
+      }
+      inputText.value = outputText.value;
+      outputText.value = "";
+      fileInput.value = "";
+      setStatus("Output moved to input.");
+    });
+
+    fileInput.addEventListener("change", () => {
+      const f = fileInput.files && fileInput.files[0];
+      if (!f) return;
+      outputName.value = defaultOutputFilename(f.name, transformReflow.checked);
+      setStatus(`Selected file: ${f.name}`);
+    });
+
+    transformReflow.addEventListener("change", updateReflowControlState);
+    updateReflowControlState();
+  </script>
+</body>
+</html>
