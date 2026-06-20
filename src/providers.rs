@@ -3,7 +3,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use crate::app::generate_index;
-use crate::config::{Bag, Host, IndexMode};
+use crate::config::{Bag, Host};
 use crate::{Result, err};
 
 pub fn base_url(bag: &Bag, port_override: Option<u16>) -> String {
@@ -53,11 +53,10 @@ pub fn deploy_bag(bag: &Bag, port_override: Option<u16>) -> Result<()> {
             Ok(())
         }
         Host::Caddy { .. } => {
-            match bag.index_mode {
-                IndexMode::Page => println!("✓ generated: {}/index.html", bag.dir.display()),
-                IndexMode::ManifestOnly => {
-                    println!("✓ generated: {}/webby-cards.json", bag.dir.display())
-                }
+            if bag.no_index {
+                println!("✓ generated: {}/webby-cards.json", bag.dir.display());
+            } else {
+                println!("✓ generated: {}/index.html", bag.dir.display());
             }
             println!("✓ live: {}", base_url(bag, None));
             Ok(())

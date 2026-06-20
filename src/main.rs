@@ -59,6 +59,9 @@ enum Command {
         name: Option<String>,
         #[arg(long)]
         tmp: bool,
+        /// Do not write the bag root index.html for this generation.
+        #[arg(long)]
+        no_index: bool,
     },
     /// Stage into the public bag and deploy it.
     Pub {
@@ -67,6 +70,9 @@ enum Command {
         name: Option<String>,
         #[arg(long)]
         tmp: bool,
+        /// Do not write the public bag root index.html for this publish.
+        #[arg(long)]
+        no_index: bool,
     },
     /// Deploy or activate a bag.
     Deploy {
@@ -74,6 +80,9 @@ enum Command {
         bag: String,
         #[arg(long)]
         port: Option<u16>,
+        /// Do not write the bag root index.html for this deploy.
+        #[arg(long)]
+        no_index: bool,
     },
     /// Serve a bag on localhost.
     Serve {
@@ -81,6 +90,9 @@ enum Command {
         bag: Option<String>,
         #[arg(long)]
         port: Option<u16>,
+        /// Do not write the bag root index.html before serving.
+        #[arg(long)]
+        no_index: bool,
     },
     /// List all bags, or one selected bag.
     Ls {
@@ -153,13 +165,35 @@ fn run() -> Result<()> {
             bag,
             name,
             tmp,
-        } => cmd_add(&Config::load()?, path, bag.as_deref(), name.as_deref(), tmp),
-        Command::Pub { path, name, tmp } => cmd_pub(&Config::load()?, path, name.as_deref(), tmp),
-        Command::Deploy { bag, port } => {
+            no_index,
+        } => cmd_add(
+            &Config::load()?,
+            path,
+            bag.as_deref(),
+            name.as_deref(),
+            tmp,
+            no_index,
+        ),
+        Command::Pub {
+            path,
+            name,
+            tmp,
+            no_index,
+        } => cmd_pub(&Config::load()?, path, name.as_deref(), tmp, no_index),
+        Command::Deploy {
+            bag,
+            port,
+            no_index,
+        } => {
             let cfg = Config::load()?;
-            deploy_bag(cfg.bag(&bag)?, port)
+            let bag = with_no_index(cfg.bag(&bag)?, no_index);
+            deploy_bag(&bag, port)
         }
-        Command::Serve { bag, port } => cmd_serve(&Config::load()?, bag.as_deref(), port),
+        Command::Serve {
+            bag,
+            port,
+            no_index,
+        } => cmd_serve(&Config::load()?, bag.as_deref(), port, no_index),
         Command::Rm { name, bag } => cmd_rm(&Config::load()?, &name, bag.as_deref()),
         Command::Open { name, bag } => cmd_open(&Config::load()?, &name, bag.as_deref()),
         Command::Domain { hostname, bag } => {
@@ -194,18 +228,19 @@ fn cmd_add(
     bag: Option<&str>,
     name: Option<&str>,
     tmp: bool,
+    no_index: bool,
 ) -> Result<()> {
-    let bag = select_bag(cfg, bag)?;
-    let staged = stage_app(&path, bag, name, tmp)?;
-    generate_index(bag)?;
-    after_add(bag)?;
+    let bag = with_no_index(select_bag(cfg, bag)?, no_index);
+    let staged = stage_app(&path, &bag, name, tmp)?;
+    generate_index(&bag)?;
+    after_add(&bag)?;
 
     println!("✓ {} → {} bag", staged.name, bag.label);
     match &bag.host {
         Host::CloudflarePages { .. } => {
             println!(
                 "  staged: {}  (run `webby deploy -b {}` to publish)",
-                app_url(&base_url(bag, None), &staged.name, staged.is_dir),
+                app_url(&base_url(&bag, None), &staged.name, staged.is_dir),
                 bag.label
             );
         }
@@ -214,13 +249,13 @@ fn cmd_add(
                 "  staged: {}  (run `webby serve -b {}` for {})",
                 staged.relative_path,
                 bag.label,
-                base_url(bag, None)
+                base_url(&bag, None)
             );
         }
         Host::TailscaleServe { .. } | Host::TailscaleFunnel { .. } => {
             println!(
                 "  url: {}",
-                app_url(&base_url(bag, None), &staged.name, staged.is_dir)
+                app_url(&base_url(&bag, None), &staged.name, staged.is_dir)
             );
             println!(
                 "  run `webby deploy -b {}` to activate {}",
@@ -230,17 +265,23 @@ fn cmd_add(
         }
         _ => println!(
             "  url: {}",
-            app_url(&base_url(bag, None), &staged.name, staged.is_dir)
+            app_url(&base_url(&bag, None), &staged.name, staged.is_dir)
         ),
     }
     Ok(())
 }
 
-fn cmd_pub(cfg: &Config, path: PathBuf, name: Option<&str>, tmp: bool) -> Result<()> {
-    let bag = cfg.bag("public")?;
-    let staged = stage_app(&path, bag, name, tmp)?;
+fn cmd_pub(
+    cfg: &Config,
+    path: PathBuf,
+    name: Option<&str>,
+    tmp: bool,
+    no_index: bool,
+) -> Result<()> {
+    let bag = with_no_index(cfg.bag("public")?, no_index);
+    let staged = stage_app(&path, &bag, name, tmp)?;
     println!("✓ {} → public bag", staged.name);
-    deploy_bag(bag, None)
+    deploy_bag(&bag, None)
 }
 
 fn cmd_ls(cfg: &Config, bag: Option<&str>) -> Result<()> {
@@ -277,7 +318,7 @@ fn print_bag_apps(bag: &config::Bag) -> Result<()> {
 fn cmd_rm(cfg: &Config, name: &str, bag: Option<&str>) -> Result<()> {
     let bag = select_bag(cfg, bag)?;
     remove_app(bag, name)?;
-    generate_index(bag)?;
+    generate_index(&bag)?;
     println!("✓ removed {name} from {} bag", bag.label);
     if matches!(bag.host, Host::CloudflarePages { .. }) {
         println!(
@@ -343,15 +384,15 @@ fn cmd_init(force: bool) -> Result<()> {
     Ok(())
 }
 
-fn cmd_serve(cfg: &Config, bag: Option<&str>, port: Option<u16>) -> Result<()> {
-    let bag = select_bag(cfg, bag)?;
+fn cmd_serve(cfg: &Config, bag: Option<&str>, port: Option<u16>, no_index: bool) -> Result<()> {
+    let bag = with_no_index(select_bag(cfg, bag)?, no_index);
     let port = port
         .or_else(|| match bag.host {
             Host::Local { port, .. } => port,
             _ => None,
         })
         .unwrap_or(8765);
-    generate_index(bag)?;
+    generate_index(&bag)?;
     println!("webby {} — {}", bag.label, bag.dir.display());
     println!("serving: http://localhost:{port}");
     println!("Press Ctrl+C to stop.");
@@ -388,6 +429,16 @@ fn select_bag<'a>(cfg: &'a Config, label: Option<&str>) -> Result<&'a config::Ba
     match label {
         Some(label) => cfg.bag(label),
         None => cfg.default_bag(),
+    }
+}
+
+fn with_no_index(bag: &config::Bag, no_index: bool) -> std::borrow::Cow<'_, config::Bag> {
+    if no_index && !bag.no_index {
+        let mut bag = bag.clone();
+        bag.no_index = true;
+        std::borrow::Cow::Owned(bag)
+    } else {
+        std::borrow::Cow::Borrowed(bag)
     }
 }
 

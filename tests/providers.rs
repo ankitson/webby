@@ -143,8 +143,8 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
 }
 
 #[test]
-fn manifest_only_bag_writes_card_manifest_without_page() {
-    let tmp = TestDir::new("manifest-only");
+fn no_index_bag_writes_card_manifest_without_page() {
+    let tmp = TestDir::new("no-index");
     let caddy = tmp.path().join("caddy");
     write_named_app(&caddy, "app");
     fs::write(caddy.join("index.html"), "old index").unwrap();
@@ -155,7 +155,7 @@ fn manifest_only_bag_writes_card_manifest_without_page() {
               "bags": {{
                 "caddy": {{
                   "dir": "{}",
-                  "indexMode": "manifest-only",
+                  "noIndex": true,
                   "host": {{ "type": "caddy", "url": "https://caddy.example" }}
                 }}
               }}
@@ -178,6 +178,45 @@ fn manifest_only_bag_writes_card_manifest_without_page() {
     assert!(!caddy.join("index.html").exists());
     let manifest = fs::read_to_string(caddy.join("webby-cards.json")).unwrap();
     assert!(manifest.contains("\"id\": \"app\""));
+    assert!(
+        String::from_utf8_lossy(&out.stdout)
+            .contains(&format!("generated: {}/webby-cards.json", caddy.display()))
+    );
+}
+
+#[test]
+fn deploy_no_index_flag_skips_root_index_without_config_mode() {
+    let tmp = TestDir::new("no-index-flag");
+    let caddy = tmp.path().join("caddy");
+    write_named_app(&caddy, "app");
+    fs::write(caddy.join("index.html"), "old index").unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "bags": {{
+                "caddy": {{
+                  "dir": "{}",
+                  "host": {{ "type": "caddy", "url": "https://caddy.example" }}
+                }}
+              }}
+            }}"#,
+            caddy.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args(["deploy", "-b", "caddy", "--no-index"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(caddy.join("webby-cards.json").exists());
+    assert!(caddy.join("webby-card-grid.js").exists());
+    assert!(!caddy.join("index.html").exists());
     assert!(
         String::from_utf8_lossy(&out.stdout)
             .contains(&format!("generated: {}/webby-cards.json", caddy.display()))

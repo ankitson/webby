@@ -3,8 +3,8 @@
 Goal: remove Webby's old Caddy-specific browse mode now that the homeserver homepage consumes `webby-cards.json` directly.
 
 Decision:
-- Keep `page` for standalone generated Webby indexes.
-- Keep `manifest-only` for host pages that consume Webby card data and render their own homepage sections.
+- Keep generated Webby indexes as the default.
+- Use `noIndex` for host pages that consume Webby card data and render their own homepage sections.
 - Remove the `browse` index mode, the `gen-browse` command, and the Caddy browse template.
 - Do not special-case or clean up `browse.html`; with browse mode gone it is just another standalone HTML app name.
 
@@ -45,13 +45,13 @@ Goal: let a host homepage reuse Webby app cards without serving a separate Webby
 
 Decision:
 - Every deploy writes `webby-cards.json` with the same normalized card data used by the Webby component.
-- Added bag-level `indexMode`: `page` or `manifest-only`.
-- `manifest-only` removes generated `index.html` and keeps only reusable card data plus `webby-card-grid.js`.
+- Added bag-level `noIndex` plus CLI `--no-index` for cases where a host page consumes Webby card data.
+- `noIndex` removes generated `index.html` and keeps only reusable card data plus `webby-card-grid.js`.
 - Directory staging now skips local metadata/cache folders such as `.git`, `.wrangler`, `node_modules`, and `logs`.
 
 Verification:
 - `cargo test`
-- Added coverage for `manifest-only` output and metadata directory skipping.
+- Added coverage for `noIndex` output and metadata directory skipping.
 
 ## 2026-06-18 — Caddy Browse Tile Collapse
 

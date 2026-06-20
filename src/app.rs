@@ -2,7 +2,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::config::{Bag, IndexMode};
+use crate::config::Bag;
 use crate::{Result, err};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -133,16 +133,13 @@ pub fn generate_index(bag: &Bag) -> Result<Vec<AppEntry>> {
         bag.dir.join("webby-card-grid.js"),
         crate::render::web_component_js(),
     )?;
-    match bag.index_mode {
-        IndexMode::Page => {
-            fs::write(
-                bag.dir.join("index.html"),
-                crate::render::render_index(&apps, "webby"),
-            )?;
-        }
-        IndexMode::ManifestOnly => {
-            remove_any(&bag.dir.join("index.html"))?;
-        }
+    if bag.no_index {
+        remove_any(&bag.dir.join("index.html"))?;
+    } else {
+        fs::write(
+            bag.dir.join("index.html"),
+            crate::render::render_index(&apps, "webby"),
+        )?;
     }
     Ok(apps)
 }

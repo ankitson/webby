@@ -3,13 +3,13 @@
 ### Remove Browse Mode
 
 Removed:
-- `browse` as a supported `indexMode`.
+- `browse` as a supported generated-index behavior.
 - The `webby gen-browse` CLI command.
 - The Caddy browse template and its render tests.
 - The Justfile recipe for regenerating `browse.html`.
 
 Modified:
-- Caddy-hosted bags now default to normal `page` output unless configured as `manifest-only`.
+- Caddy-hosted bags now default to normal index output unless configured with `noIndex`.
 - `browse.html` is no longer reserved or cleaned up; it behaves like any other standalone HTML app.
 
 Why:
@@ -44,11 +44,11 @@ Why:
 
 Added:
 - `webby-cards.json` generation for every bag deploy.
-- Bag `indexMode` config with `page` and `manifest-only`.
-- Integration tests for `manifest-only` and skipped metadata folders.
+- Bag `noIndex` config and CLI `--no-index` override for hosts that do not want a root `index.html`.
+- Integration tests for `noIndex` and skipped metadata folders.
 
 Modified:
-- All bags default to `page` unless configured as `manifest-only`.
+- All bags write `index.html` by default unless configured with `noIndex` or invoked with `--no-index`.
 - Directory staging skips `.git`, `.wrangler`, `.DS_Store`, `node_modules`, and `logs`.
 
 Why:

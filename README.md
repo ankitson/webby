@@ -133,7 +133,7 @@ Example:
     },
     "homepage-tools": {
       "dir": "~/.local/share/webby/tools",
-      "indexMode": "manifest-only",
+      "noIndex": true,
       "host": { "type": "caddy", "url": "https://example.test/webby/" }
     }
   }
@@ -147,16 +147,16 @@ checkout, a local `.env.secret` file is loaded if present.
 
 `local` generates an index and can be served with `webby serve`.
 
-Bag `indexMode` controls generated index artifacts:
+Webby always writes `webby-cards.json` and `webby-card-grid.js`. By default it
+also writes a standalone `index.html` for the bag root.
 
-- `page`: write `index.html` plus `webby-cards.json`.
-- `manifest-only`: write only `webby-cards.json` and `webby-card-grid.js`.
+Set `noIndex: true` on a bag, or pass `--no-index` to `add`, `pub`, `deploy`,
+or `serve`, when a larger site consumes the card data and the bag should not
+publish its own root index page.
 
-`manifest-only` is for a larger site that wants Webby to manage app staging and
-card data but render the cards inside its own homepage.
-
-Caddy-hosted bags do not get a special listing mode. Use `page` for a standalone
-Webby index, or `manifest-only` when another homepage consumes `webby-cards.json`.
+Caddy-hosted bags do not get a special listing mode. They can either expose the
+normal generated Webby index, or set `noIndex` when another homepage owns the
+root experience.
 
 `tailscale-serve` and `tailscale-funnel` call the `tailscale` CLI with the bag
 directory as the target.
