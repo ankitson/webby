@@ -171,6 +171,58 @@ Modified:
 Why:
 - Live iframe previews made the index laggy by loading every hosted app inside the launcher. Static CSS previews keep visual variety while making the UI much snappier.
 
+## 2026-06-21
+
+### Shared Site Header
+
+Added:
+- Added generated `site-header.html` and `site-header.css` template partials.
+
+Modified:
+- The generated index now includes the shared personal-site header before the card grid.
+- Removed the old public/internal bag nav from the index template.
+- Corrected Justfile argument comments after confirming `just deploy -b public` is the working deploy invocation.
+
+Why:
+- The projects page should share navigation and visual chrome with the blog without fetching runtime header assets from another site.
+
+### Shared Header Theme Parity
+
+Modified:
+- Updated the generated header partials to include the shared dark-mode toggle and script.
+- Added explicit light/dark page variables for the mini index.
+- Mirrored the document theme onto `webby-card-grid` and replaced its internal media-query theme switch with a host `data-theme` switch.
+- Extended the render test to assert the theme toggle and grid theme sync script are present.
+
+Why:
+- The mini page should not render a light header beside the dark projects page, and the shared header should align with the blog across different root font sizes.
+
+### Generic Index Chrome
+
+Added:
+- Added optional `indexChromeDir` bag config and `WEBBY_INDEX_CHROME_DIR` env support for inlining `head.html` and `body.html` fragments into generated indexes.
+- Documented the generic chrome hook in the README.
+- Added render and integration coverage for configured custom chrome fragments.
+
+Removed:
+- Removed personal-site generated header partials from webby core.
+
+Modified:
+- The default webby index no longer includes personal site chrome, but still mirrors `html[data-theme]` onto `webby-card-grid` when an external chrome fragment provides a theme toggle.
+- Restored system dark-mode behavior for the generic index when no custom theme is set.
+
+Why:
+- Webby should provide an extension point for host-site chrome without knowing or committing a specific person's header.
+
+### Host Theme Tokens
+
+Modified:
+- Mapped generated index colors to optional `--site-page-*` host theme tokens with webby palette fallbacks.
+- Changed `webby-card-grid` to consume inherited `--webby-theme-*` variables so card colors can follow host-provided theme tokens across the shadow DOM boundary.
+
+Why:
+- A host site can share its color scheme with webby's index while webby remains generic by default.
+
 ## 2026-06-10
 
 ### Preview Tile Index

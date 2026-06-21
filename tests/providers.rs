@@ -147,6 +147,56 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
 }
 
 #[test]
+fn deploy_inlines_configured_index_chrome_fragments() {
+    let tmp = TestDir::new("index-chrome");
+    let local = tmp.path().join("local");
+    let chrome = tmp.path().join("chrome");
+    write_named_app(&local, "app");
+    fs::create_dir_all(&chrome).unwrap();
+    fs::write(
+        chrome.join("head.html"),
+        "<style>.custom-chrome{color:red}</style>",
+    )
+    .unwrap();
+    fs::write(
+        chrome.join("body.html"),
+        "<header class=\"custom-chrome\">Custom</header>",
+    )
+    .unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{
+                  "dir": "{}",
+                  "indexChromeDir": "{}",
+                  "host": {{ "type": "local", "port": 7777 }}
+                }}
+              }}
+            }}"#,
+            local.display(),
+            chrome.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args(["deploy", "-b", "local"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let html = fs::read_to_string(local.join("index.html")).unwrap();
+    assert!(html.contains("<style>.custom-chrome{color:red}</style>"));
+    assert!(html.contains("<header class=\"custom-chrome\">Custom</header>"));
+}
+
+#[test]
 fn no_index_bag_writes_card_manifest_without_page() {
     let tmp = TestDir::new("no-index");
     let caddy = tmp.path().join("caddy");

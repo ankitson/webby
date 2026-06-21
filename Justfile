@@ -14,11 +14,11 @@ check:
     cargo check
     cargo test
 
-# Run webby from this checkout. Pass CLI args after `--`.
+# Run webby from this checkout. Pass CLI args after the recipe name.
 run *args:
     cargo run -- {{args}}
 
-# Stage an app into a bag. Pass extra flags after `--`.
+# Stage an app into a bag. Pass extra flags after the recipe name.
 add path *flags:
     cargo run -- add {{path}} {{flags}}
 
@@ -26,11 +26,11 @@ add path *flags:
 pub path *flags:
     cargo run -- pub {{path}} {{flags}}
 
-# Activate/deploy a bag. Pass flags after `--`, e.g. `-- -b public`.
+# Activate/deploy a bag. Pass flags after the recipe name, e.g. `-b public`.
 deploy *flags:
     cargo run -- deploy {{flags}}
 
-# List all bags, or pass `-- -b <name>`.
+# List all bags, or pass `-b <name>`.
 ls *flags:
     cargo run -- ls {{flags}}
 

@@ -4,24 +4,39 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title }}</title>
+  {{ chrome_head | safe }}
   <style>
 {% include "style.css" %}
   </style>
 </head>
 <body>
+{{ chrome_body | safe }}
 <main>
   <h1 class="sr-only">{{ title }}</h1>
-  <nav class="bag-nav">
-    <a href="https://mini.ankitson.com">public</a>
-    <a href="https://home.ankitson.com">internal</a>
-  </nav>
   <webby-card-grid id="webby-grid" aria-label="Sites"></webby-card-grid>
   <script type="application/json" id="webby-card-data">{{ items_json | safe }}</script>
   <script type="module">
     import "./webby-card-grid.js";
 
     const data = document.getElementById("webby-card-data");
-    document.getElementById("webby-grid").items = JSON.parse(data.textContent || "[]");
+    const grid = document.getElementById("webby-grid");
+
+    grid.items = JSON.parse(data.textContent || "[]");
+
+    const syncTheme = () => {
+      const theme = document.documentElement.getAttribute("data-theme");
+      if (theme) {
+        grid.setAttribute("data-theme", theme);
+      } else {
+        grid.removeAttribute("data-theme");
+      }
+    };
+
+    syncTheme();
+    new MutationObserver(syncTheme).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
   </script>
 </main>
 </body>

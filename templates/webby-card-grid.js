@@ -4,13 +4,13 @@ TEMPLATE.innerHTML = `
   <style>
     :host {
       color-scheme: light dark;
-      --webby-paper: #f7f7f2;
-      --webby-ink: #171713;
-      --webby-muted: #6c6a60;
-      --webby-line: rgba(23,23,19,.14);
-      --webby-tile: #ecebe3;
-      --webby-accent: #d25f3b;
-      --webby-gap: clamp(14px, 2vw, 22px);
+      --webby-paper: var(--webby-theme-paper, #f7f7f2);
+      --webby-ink: var(--webby-theme-ink, #171713);
+      --webby-muted: var(--webby-theme-muted, #6c6a60);
+      --webby-line: var(--webby-theme-line, rgba(23,23,19,.14));
+      --webby-tile: var(--webby-theme-tile, #ecebe3);
+      --webby-accent: var(--webby-theme-accent, #d25f3b);
+      --webby-gap: var(--webby-theme-gap, clamp(14px, 2vw, 22px));
       --webby-column-gap: clamp(10px, 1.8vw, 18px);
       --webby-card-radius: 8px;
       --webby-card-min-width: 280px;
@@ -19,31 +19,29 @@ TEMPLATE.innerHTML = `
       --webby-card-max-height: 800px;
       --webby-card-track-size: minmax(min(100%, var(--webby-card-min-width)), 1fr);
       --webby-grid-justify-content: start;
-      --webby-preview-filter: none;
-      --webby-preview-overlay: transparent;
-      --webby-preview-inset-shadow: 0 1px 0 rgba(255,255,255,.45) inset;
-      --webby-card-title-color: var(--webby-ink);
-      --webby-card-description-color: var(--webby-muted);
+      --webby-preview-filter: var(--webby-theme-preview-filter, none);
+      --webby-preview-overlay: var(--webby-theme-preview-overlay, transparent);
+      --webby-preview-inset-shadow: var(--webby-theme-preview-inset-shadow, 0 1px 0 rgba(255,255,255,.45) inset);
+      --webby-card-title-color: var(--webby-theme-card-title-color, var(--webby-ink));
+      --webby-card-description-color: var(--webby-theme-card-description-color, var(--webby-muted));
       --webby-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       display: block;
       color: var(--webby-ink);
       font-family: var(--webby-font);
     }
 
-    @media (prefers-color-scheme: dark) {
-      :host {
-        --webby-paper: #11120f;
-        --webby-ink: #f2f0e8;
-        --webby-muted: #aba89c;
-        --webby-line: rgba(255,255,255,.16);
-        --webby-tile: #1b1d18;
-        --webby-accent: #ff8a62;
-        --webby-preview-filter: brightness(.72) contrast(.94) saturate(.88);
-        --webby-preview-overlay: rgba(0,0,0,.18);
-        --webby-preview-inset-shadow: 0 1px 0 rgba(255,255,255,.08) inset;
-        --webby-card-title-color: #d8d3c7;
-        --webby-card-description-color: #8f8a7d;
-      }
+    :host([data-theme="dark"]) {
+      --webby-paper: var(--webby-theme-paper, #11120f);
+      --webby-ink: var(--webby-theme-ink, #f2f0e8);
+      --webby-muted: var(--webby-theme-muted, #aba89c);
+      --webby-line: var(--webby-theme-line, rgba(255,255,255,.16));
+      --webby-tile: var(--webby-theme-tile, #1b1d18);
+      --webby-accent: var(--webby-theme-accent, #ff8a62);
+      --webby-preview-filter: var(--webby-theme-preview-filter, brightness(.72) contrast(.94) saturate(.88));
+      --webby-preview-overlay: var(--webby-theme-preview-overlay, rgba(0,0,0,.18));
+      --webby-preview-inset-shadow: var(--webby-theme-preview-inset-shadow, 0 1px 0 rgba(255,255,255,.08) inset);
+      --webby-card-title-color: var(--webby-theme-card-title-color, #d8d3c7);
+      --webby-card-description-color: var(--webby-theme-card-description-color, #8f8a7d);
     }
 
     * { box-sizing: border-box; }
