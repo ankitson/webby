@@ -214,6 +214,15 @@ Modified:
 Why:
 - Webby should provide an extension point for host-site chrome without knowing or committing a specific person's header.
 
+### Host Theme Tokens
+
+Modified:
+- Mapped generated index colors to optional `--site-page-*` host theme tokens with webby palette fallbacks.
+- Changed `webby-card-grid` to consume inherited `--webby-theme-*` variables so card colors can follow host-provided theme tokens across the shadow DOM boundary.
+
+Why:
+- A host site can share its color scheme with webby's index while webby remains generic by default.
+
 ## 2026-06-10
 
 ### Preview Tile Index

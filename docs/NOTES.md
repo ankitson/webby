@@ -211,6 +211,14 @@ Decision:
 - Keep the generated index generic by default; no personal links or header are committed in webby templates.
 - Continue mirroring `html[data-theme]` onto `webby-card-grid` so any external theme toggle can control the grid.
 
+## 2026-06-21 — Host Theme Tokens
+
+Goal: let a host site align webby's generated index colors without baking host-specific palette values into webby.
+
+Decision:
+- Map webby's page colors to optional `--site-page-*` tokens when a configured chrome fragment provides them.
+- Pass those resolved colors into `webby-card-grid` through `--webby-theme-*` custom properties so the shadow DOM cards follow the same palette.
+
 ## 2026-06-10 — Preview Tile Index
 
 Goal: make the generated webby index feel like a dense app launcher instead of a text-heavy directory.
