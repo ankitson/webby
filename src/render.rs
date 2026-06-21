@@ -5,6 +5,16 @@ use crate::cards::from_app_entry;
 
 fn make_env() -> Environment<'static> {
     let mut env = Environment::new();
+    env.add_template(
+        "site-header.css",
+        include_str!("../templates/site-header.css"),
+    )
+    .expect("site-header.css template");
+    env.add_template(
+        "site-header.html",
+        include_str!("../templates/site-header.html"),
+    )
+    .expect("site-header.html template");
     env.add_template("style.css", include_str!("../templates/style.css"))
         .expect("style.css template");
     env.add_template("index.html", include_str!("../templates/index.html"))
@@ -56,6 +66,8 @@ mod tests {
         let html = render_index(&apps, "webby");
 
         assert!(html.contains("<h1 class=\"sr-only\">webby</h1>"));
+        assert!(html.contains("<header class=\"site-header\">"));
+        assert!(html.contains("aria-current=\"page\"><span>projects</span>"));
         assert!(html.contains("<webby-card-grid id=\"webby-grid\""));
         assert!(html.contains("type=\"application/json\" id=\"webby-card-data\""));
         assert!(html.contains("\"id\":\"alpha\""));
@@ -69,6 +81,7 @@ mod tests {
         assert!(!html.contains("<iframe"));
         assert!(!html.contains("Index"));
         assert!(!html.contains("entries"));
+        assert!(!html.contains("bag-nav"));
         assert!(!html.contains(">tool<"));
         assert!(!html.contains(">page<"));
     }

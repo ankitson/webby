@@ -5,16 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title }}</title>
   <style>
+{% include "site-header.css" %}
 {% include "style.css" %}
   </style>
 </head>
 <body>
+{% include "site-header.html" %}
 <main>
   <h1 class="sr-only">{{ title }}</h1>
-  <nav class="bag-nav">
-    <a href="https://mini.ankitson.com">public</a>
-    <a href="https://home.ankitson.com">internal</a>
-  </nav>
   <webby-card-grid id="webby-grid" aria-label="Sites"></webby-card-grid>
   <script type="application/json" id="webby-card-data">{{ items_json | safe }}</script>
   <script type="module">

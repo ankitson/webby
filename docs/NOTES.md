@@ -183,6 +183,15 @@ Verification:
 - `webby deploy -b internal`
 - `webby deploy -b local`
 
+## 2026-06-21 — Shared Site Header
+
+Goal: align the project index header with the redesigned blog header.
+
+Decision:
+- Consume generated `site-header.html` and `site-header.css` partials from the blog repo's shared site-chrome generator.
+- Replace the local public/internal mini nav with the cross-site writing/projects/GitHub/RSS header.
+- Mark `projects` active on the webby index while the blog marks `writing` active.
+
 ## 2026-06-10 — Preview Tile Index
 
 Goal: make the generated webby index feel like a dense app launcher instead of a text-heavy directory.

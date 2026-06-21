@@ -27,9 +27,6 @@ webby-card-grid {
   --webby-card-title-color: #d8d3c7;
   --webby-card-description-color: #8f8a7d;
 }
-.bag-nav { display: flex; gap: 14px; margin-bottom: clamp(10px, 1.8vw, 18px); }
-.bag-nav a { font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing: .02em; opacity: .7; transition: opacity .15s; }
-.bag-nav a:hover { opacity: 1; color: var(--ink); }
 @media (max-width: 560px) {
   main { padding: 10px; }
 }

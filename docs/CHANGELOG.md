@@ -171,6 +171,21 @@ Modified:
 Why:
 - Live iframe previews made the index laggy by loading every hosted app inside the launcher. Static CSS previews keep visual variety while making the UI much snappier.
 
+## 2026-06-21
+
+### Shared Site Header
+
+Added:
+- Added generated `site-header.html` and `site-header.css` template partials.
+
+Modified:
+- The generated index now includes the shared Ankit Soni header before the card grid.
+- Removed the old public/internal bag nav from the index template.
+- Corrected Justfile argument comments after confirming `just deploy -b public` is the working deploy invocation.
+
+Why:
+- The projects page should share navigation and visual chrome with the blog without fetching runtime header assets from another site.
+
 ## 2026-06-10
 
 ### Preview Tile Index
