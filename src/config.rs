@@ -54,6 +54,13 @@ pub struct Bag {
     pub dir: PathBuf,
     pub host: Host,
     pub no_index: bool,
+    pub index_chrome: Option<IndexChrome>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IndexChrome {
+    pub head: Option<PathBuf>,
+    pub body: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug)]
@@ -79,6 +86,16 @@ struct RawBag {
     host: Option<Host>,
     #[serde(rename = "noIndex", alias = "no_index")]
     no_index: Option<bool>,
+    #[serde(rename = "indexChrome", alias = "index_chrome")]
+    index_chrome: Option<RawIndexChrome>,
+    #[serde(rename = "indexChromeDir", alias = "index_chrome_dir")]
+    index_chrome_dir: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct RawIndexChrome {
+    head: Option<String>,
+    body: Option<String>,
 }
 
 impl Config {
@@ -295,6 +312,19 @@ fn merge_user_config(bags: &mut Vec<Bag>, raw: &RawConfig) -> Result<()> {
             .no_index
             .or_else(|| existing.map(|b| b.no_index))
             .unwrap_or(false);
+        let index_chrome = raw_bag
+            .index_chrome
+            .as_ref()
+            .map(raw_index_chrome)
+            .transpose()?
+            .or_else(|| {
+                raw_bag
+                    .index_chrome_dir
+                    .as_deref()
+                    .map(index_chrome_from_dir)
+            })
+            .or_else(|| existing.and_then(|b| b.index_chrome.clone()))
+            .or_else(default_index_chrome);
         upsert_bag(
             bags,
             Bag {
@@ -302,6 +332,7 @@ fn merge_user_config(bags: &mut Vec<Bag>, raw: &RawConfig) -> Result<()> {
                 dir,
                 host,
                 no_index,
+                index_chrome,
             },
         );
     }
@@ -333,7 +364,29 @@ fn bag(label: impl Into<String>, dir: PathBuf, host: Host) -> Bag {
         dir,
         host,
         no_index: false,
+        index_chrome: default_index_chrome(),
     }
+}
+
+fn raw_index_chrome(raw: &RawIndexChrome) -> Result<IndexChrome> {
+    Ok(IndexChrome {
+        head: raw.head.as_deref().map(expand_path),
+        body: raw.body.as_deref().map(expand_path),
+    })
+}
+
+fn index_chrome_from_dir(dir: &str) -> IndexChrome {
+    let dir = expand_path(dir);
+    IndexChrome {
+        head: Some(dir.join("head.html")),
+        body: Some(dir.join("body.html")),
+    }
+}
+
+fn default_index_chrome() -> Option<IndexChrome> {
+    env::var("WEBBY_INDEX_CHROME_DIR")
+        .ok()
+        .map(|dir| index_chrome_from_dir(&dir))
 }
 
 fn load_env_file() -> Result<()> {

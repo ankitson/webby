@@ -3,18 +3,14 @@ use minijinja::{Environment, context};
 use crate::app::AppEntry;
 use crate::cards::from_app_entry;
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct IndexChromeContent {
+    pub head: String,
+    pub body: String,
+}
+
 fn make_env() -> Environment<'static> {
     let mut env = Environment::new();
-    env.add_template(
-        "site-header.css",
-        include_str!("../templates/site-header.css"),
-    )
-    .expect("site-header.css template");
-    env.add_template(
-        "site-header.html",
-        include_str!("../templates/site-header.html"),
-    )
-    .expect("site-header.html template");
     env.add_template("style.css", include_str!("../templates/style.css"))
         .expect("style.css template");
     env.add_template("index.html", include_str!("../templates/index.html"))
@@ -22,14 +18,16 @@ fn make_env() -> Environment<'static> {
     env
 }
 
-pub fn render_index(apps: &[AppEntry], title: &str) -> String {
+pub fn render_index(apps: &[AppEntry], title: &str, chrome: &IndexChromeContent) -> String {
     let items = apps.iter().map(from_app_entry).collect::<Vec<_>>();
     let items_json = serde_json::to_string(&items).expect("serialize card items");
 
     make_env()
         .get_template("index.html")
         .expect("index.html template")
-        .render(context! { title, items_json })
+        .render(
+            context! { title, items_json, chrome_head => chrome.head, chrome_body => chrome.body },
+        )
         .expect("render index.html")
 }
 
@@ -63,12 +61,9 @@ mod tests {
             },
         ];
 
-        let html = render_index(&apps, "webby");
+        let html = render_index(&apps, "webby", &IndexChromeContent::default());
 
         assert!(html.contains("<h1 class=\"sr-only\">webby</h1>"));
-        assert!(html.contains("<header class=\"site-header\">"));
-        assert!(html.contains("aria-current=\"page\"><span>projects</span>"));
-        assert!(html.contains("id=\"theme-toggle\""));
         assert!(html.contains("<webby-card-grid id=\"webby-grid\""));
         assert!(html.contains("type=\"application/json\" id=\"webby-card-data\""));
         assert!(html.contains("grid.setAttribute(\"data-theme\", theme);"));
@@ -84,8 +79,24 @@ mod tests {
         assert!(!html.contains("Index"));
         assert!(!html.contains("entries"));
         assert!(!html.contains("bag-nav"));
+        assert!(!html.contains("site-header"));
         assert!(!html.contains(">tool<"));
         assert!(!html.contains(">page<"));
+    }
+
+    #[test]
+    fn index_includes_optional_chrome_fragments() {
+        let html = render_index(
+            &[],
+            "webby",
+            &IndexChromeContent {
+                head: "<style>.custom-chrome{color:red}</style>".to_string(),
+                body: "<header class=\"custom-chrome\">Custom</header>".to_string(),
+            },
+        );
+
+        assert!(html.contains("<style>.custom-chrome{color:red}</style>"));
+        assert!(html.contains("<header class=\"custom-chrome\">Custom</header>"));
     }
 
     #[test]

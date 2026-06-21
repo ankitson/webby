@@ -202,6 +202,15 @@ Decision:
 - Mirror `html[data-theme]` onto the `webby-card-grid` component so the grid changes with the shared toggle.
 - Let the shared header CSS own font loading and px-based measurements so the header aligns with the blog despite different root font sizes.
 
+## 2026-06-21 — Generic Index Chrome
+
+Goal: remove personal-site header templates from webby core while still letting hosted bags share chrome with a parent site.
+
+Decision:
+- Add a generic optional `indexChromeDir` / `WEBBY_INDEX_CHROME_DIR` hook that reads `head.html` and `body.html` fragments at index generation time.
+- Keep the generated index generic by default; no personal links or header are committed in webby templates.
+- Continue mirroring `html[data-theme]` onto `webby-card-grid` so any external theme toggle can control the grid.
+
 ## 2026-06-10 — Preview Tile Index
 
 Goal: make the generated webby index feel like a dense app launcher instead of a text-heavy directory.

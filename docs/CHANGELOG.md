@@ -179,7 +179,7 @@ Added:
 - Added generated `site-header.html` and `site-header.css` template partials.
 
 Modified:
-- The generated index now includes the shared Ankit Soni header before the card grid.
+- The generated index now includes the shared personal-site header before the card grid.
 - Removed the old public/internal bag nav from the index template.
 - Corrected Justfile argument comments after confirming `just deploy -b public` is the working deploy invocation.
 
@@ -196,6 +196,23 @@ Modified:
 
 Why:
 - The mini page should not render a light header beside the dark projects page, and the shared header should align with the blog across different root font sizes.
+
+### Generic Index Chrome
+
+Added:
+- Added optional `indexChromeDir` bag config and `WEBBY_INDEX_CHROME_DIR` env support for inlining `head.html` and `body.html` fragments into generated indexes.
+- Documented the generic chrome hook in the README.
+- Added render and integration coverage for configured custom chrome fragments.
+
+Removed:
+- Removed personal-site generated header partials from webby core.
+
+Modified:
+- The default webby index no longer includes personal site chrome, but still mirrors `html[data-theme]` onto `webby-card-grid` when an external chrome fragment provides a theme toggle.
+- Restored system dark-mode behavior for the generic index when no custom theme is set.
+
+Why:
+- Webby should provide an extension point for host-site chrome without knowing or committing a specific person's header.
 
 ## 2026-06-10
 

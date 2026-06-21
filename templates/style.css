@@ -31,6 +31,23 @@
 [data-theme="light"] {
   color-scheme: light;
 }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #11120f;
+    --ink: #f2f0e8;
+    --muted: #aba89c;
+    --line: rgba(255,255,255,.16);
+    --tile: #1b1d18;
+    --shadow: 0 14px 32px rgba(0,0,0,.34);
+    --accent: #ff8a62;
+    --preview-filter: brightness(.72) contrast(.94) saturate(.88);
+    --preview-overlay: rgba(0,0,0,.18);
+    --preview-inset-shadow: 0 1px 0 rgba(255,255,255,.08) inset;
+    --card-title: #d8d3c7;
+    --card-description: #8f8a7d;
+  }
+}
 * { box-sizing: border-box; }
 html { min-height: 100%; background: var(--paper); }
 body { min-height: 100%; margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; transition: background-color .2s ease, color .2s ease; }

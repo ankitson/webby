@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title }}</title>
+  {{ chrome_head | safe }}
   <style>
-{% include "site-header.css" %}
 {% include "style.css" %}
   </style>
 </head>
 <body>
-{% include "site-header.html" %}
+{{ chrome_body | safe }}
 <main>
   <h1 class="sr-only">{{ title }}</h1>
   <webby-card-grid id="webby-grid" aria-label="Sites"></webby-card-grid>
