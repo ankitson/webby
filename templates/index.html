@@ -19,7 +19,24 @@
     import "./webby-card-grid.js";
 
     const data = document.getElementById("webby-card-data");
-    document.getElementById("webby-grid").items = JSON.parse(data.textContent || "[]");
+    const grid = document.getElementById("webby-grid");
+
+    grid.items = JSON.parse(data.textContent || "[]");
+
+    const syncTheme = () => {
+      const theme = document.documentElement.getAttribute("data-theme");
+      if (theme) {
+        grid.setAttribute("data-theme", theme);
+      } else {
+        grid.removeAttribute("data-theme");
+      }
+    };
+
+    syncTheme();
+    new MutationObserver(syncTheme).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
   </script>
 </main>
 </body>

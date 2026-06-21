@@ -192,6 +192,16 @@ Decision:
 - Replace the local public/internal mini nav with the cross-site writing/projects/GitHub/RSS header.
 - Mark `projects` active on the webby index while the blog marks `writing` active.
 
+## 2026-06-21 — Shared Header Theme Parity
+
+Goal: make the mini projects page match the blog header in dark mode and spacing.
+
+Decision:
+- Consume the generated shared theme toggle and script instead of omitting the control on webby.
+- Default the mini page to dark when no theme is stored locally, preserving the existing projects-page look.
+- Mirror `html[data-theme]` onto the `webby-card-grid` component so the grid changes with the shared toggle.
+- Let the shared header CSS own font loading and px-based measurements so the header aligns with the blog despite different root font sizes.
+
 ## 2026-06-10 — Preview Tile Index
 
 Goal: make the generated webby index feel like a dense app launcher instead of a text-heavy directory.

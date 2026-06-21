@@ -30,20 +30,18 @@ TEMPLATE.innerHTML = `
       font-family: var(--webby-font);
     }
 
-    @media (prefers-color-scheme: dark) {
-      :host {
-        --webby-paper: #11120f;
-        --webby-ink: #f2f0e8;
-        --webby-muted: #aba89c;
-        --webby-line: rgba(255,255,255,.16);
-        --webby-tile: #1b1d18;
-        --webby-accent: #ff8a62;
-        --webby-preview-filter: brightness(.72) contrast(.94) saturate(.88);
-        --webby-preview-overlay: rgba(0,0,0,.18);
-        --webby-preview-inset-shadow: 0 1px 0 rgba(255,255,255,.08) inset;
-        --webby-card-title-color: #d8d3c7;
-        --webby-card-description-color: #8f8a7d;
-      }
+    :host([data-theme="dark"]) {
+      --webby-paper: #11120f;
+      --webby-ink: #f2f0e8;
+      --webby-muted: #aba89c;
+      --webby-line: rgba(255,255,255,.16);
+      --webby-tile: #1b1d18;
+      --webby-accent: #ff8a62;
+      --webby-preview-filter: brightness(.72) contrast(.94) saturate(.88);
+      --webby-preview-overlay: rgba(0,0,0,.18);
+      --webby-preview-inset-shadow: 0 1px 0 rgba(255,255,255,.08) inset;
+      --webby-card-title-color: #d8d3c7;
+      --webby-card-description-color: #8f8a7d;
     }
 
     * { box-sizing: border-box; }

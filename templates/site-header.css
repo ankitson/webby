@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
 .site-header {
   --site-bg: #f7f6f3;
   --site-text: #1a1a17;
@@ -9,6 +11,7 @@
   z-index: 1;
   border-bottom: 1px solid var(--site-border);
   background: var(--site-bg);
+  font-size: 18px;
   backdrop-filter: blur(12px);
 }
 
@@ -24,17 +27,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 27px;
   max-width: 980px;
   margin: 0 auto;
-  padding: 1.1rem 1.8rem;
+  padding: 20px 32px;
 }
 
 .site-logo {
   flex: none;
   color: var(--site-accent);
   font-family: var(--font-mono, 'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace);
-  font-size: 1rem;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1;
   text-decoration: none;
@@ -47,7 +50,7 @@
 .site-nav {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 23px;
 }
 
 .site-nav-link {
@@ -56,7 +59,7 @@
   gap: 0.38rem;
   color: var(--site-muted);
   font-family: var(--font-mono, 'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace);
-  font-size: 0.67rem;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.02em;
   line-height: 1;
@@ -70,8 +73,38 @@
 
 .site-nav-icon {
   display: block;
-  width: 0.8rem;
-  height: 0.8rem;
+  width: 14px;
+  height: 14px;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--site-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.theme-toggle:hover {
+  color: var(--site-text);
+  border-color: var(--site-muted);
+}
+
+.theme-icon {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+}
+
+[data-theme="dark"] .theme-icon {
+  background: currentColor;
 }
 
 @media (max-width: 780px) {
@@ -82,13 +115,13 @@
 
   .site-nav {
     flex-wrap: wrap;
-    gap: 0.85rem;
+    gap: 15px;
   }
 }
 
 @media (max-width: 520px) {
   .site-header-inner {
-    padding-right: 1.1rem;
-    padding-left: 1.1rem;
+    padding-right: 20px;
+    padding-left: 20px;
   }
 }

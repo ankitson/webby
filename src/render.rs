@@ -68,8 +68,10 @@ mod tests {
         assert!(html.contains("<h1 class=\"sr-only\">webby</h1>"));
         assert!(html.contains("<header class=\"site-header\">"));
         assert!(html.contains("aria-current=\"page\"><span>projects</span>"));
+        assert!(html.contains("id=\"theme-toggle\""));
         assert!(html.contains("<webby-card-grid id=\"webby-grid\""));
         assert!(html.contains("type=\"application/json\" id=\"webby-card-data\""));
+        assert!(html.contains("grid.setAttribute(\"data-theme\", theme);"));
         assert!(html.contains("\"id\":\"alpha\""));
         assert!(html.contains("\"title\":\"alpha\""));
         assert!(html.contains("\"href\":\"./alpha/\""));

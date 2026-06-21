@@ -1,4 +1,19 @@
 :root {
+  color-scheme: light;
+  --paper: #f7f6f3;
+  --ink: #1a1a17;
+  --muted: #6f6e68;
+  --line: rgba(26,26,23,.14);
+  --tile: #ffffff;
+  --shadow: 0 14px 32px rgba(45,43,36,.12);
+  --accent: #356897;
+  --preview-filter: none;
+  --preview-overlay: transparent;
+  --preview-inset-shadow: 0 1px 0 rgba(255,255,255,.45) inset;
+  --card-title: #1a1a17;
+  --card-description: #6f6e68;
+}
+[data-theme="dark"] {
   color-scheme: dark;
   --paper: #11120f;
   --ink: #f2f0e8;
@@ -7,10 +22,18 @@
   --tile: #1b1d18;
   --shadow: 0 14px 32px rgba(0,0,0,.34);
   --accent: #ff8a62;
+  --preview-filter: brightness(.72) contrast(.94) saturate(.88);
+  --preview-overlay: rgba(0,0,0,.18);
+  --preview-inset-shadow: 0 1px 0 rgba(255,255,255,.08) inset;
+  --card-title: #d8d3c7;
+  --card-description: #8f8a7d;
+}
+[data-theme="light"] {
+  color-scheme: light;
 }
 * { box-sizing: border-box; }
 html { min-height: 100%; background: var(--paper); }
-body { min-height: 100%; margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+body { min-height: 100%; margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; transition: background-color .2s ease, color .2s ease; }
 main { width: 100%; margin: 0; padding: clamp(14px, 2.5vw, 28px); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 webby-card-grid {
@@ -21,11 +44,11 @@ webby-card-grid {
   --webby-tile: var(--tile);
   --webby-accent: var(--accent);
   --webby-gap: clamp(14px, 2vw, 22px);
-  --webby-preview-filter: brightness(.72) contrast(.94) saturate(.88);
-  --webby-preview-overlay: rgba(0,0,0,.18);
-  --webby-preview-inset-shadow: 0 1px 0 rgba(255,255,255,.08) inset;
-  --webby-card-title-color: #d8d3c7;
-  --webby-card-description-color: #8f8a7d;
+  --webby-preview-filter: var(--preview-filter);
+  --webby-preview-overlay: var(--preview-overlay);
+  --webby-preview-inset-shadow: var(--preview-inset-shadow);
+  --webby-card-title-color: var(--card-title);
+  --webby-card-description-color: var(--card-description);
 }
 @media (max-width: 560px) {
   main { padding: 10px; }

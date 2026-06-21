@@ -186,6 +186,17 @@ Modified:
 Why:
 - The projects page should share navigation and visual chrome with the blog without fetching runtime header assets from another site.
 
+### Shared Header Theme Parity
+
+Modified:
+- Updated the generated header partials to include the shared dark-mode toggle and script.
+- Added explicit light/dark page variables for the mini index.
+- Mirrored the document theme onto `webby-card-grid` and replaced its internal media-query theme switch with a host `data-theme` switch.
+- Extended the render test to assert the theme toggle and grid theme sync script are present.
+
+Why:
+- The mini page should not render a light header beside the dark projects page, and the shared header should align with the blog across different root font sizes.
+
 ## 2026-06-10
 
 ### Preview Tile Index
