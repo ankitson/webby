@@ -1,3 +1,20 @@
+## 2026-06-21 — Public Preview Asset Path
+
+Goal: make generated preview images load on the public Cloudflare Pages bag.
+
+Discovery:
+- Public pages referenced `./.webby-previews/*.jpg`, but Cloudflare Pages returned the generated homepage HTML for those hidden-directory asset requests.
+- The public bag also did not have a deployed preview directory, so cards fell through to the HTML fallback instead of an image response.
+
+Decision:
+- Move Webby's generated preview assets to the non-hidden `webby-previews/` directory.
+- Update generated card manifests and the web component fallback preview base to use that non-hidden path.
+
+Verification:
+- Regenerated the public bag previews into `/projects/webby/bags/public/webby-previews/`.
+- Served the public bag locally and confirmed `/webby-previews/kickoff-worldcup.jpg` returns `200`.
+- `just check`
+
 ## 2026-06-19 — Remove Browse Mode
 
 Goal: remove Webby's old Caddy-specific browse mode now that the homeserver homepage consumes `webby-cards.json` directly.

@@ -1,3 +1,16 @@
+## 2026-06-21
+
+### Public Preview Asset Path
+
+Modified:
+- Preview captures now write to `webby-previews/` instead of `.webby-previews/`.
+- Generated card manifests and the card-grid default preview base now reference `webby-previews/*.jpg`.
+- The generated public card manifest and preview directory are ignored with the other public deploy artifacts.
+- Updated preview-path tests and README text.
+
+Why:
+- Cloudflare Pages does not reliably serve the hidden `.webby-previews/` asset path; missing image requests were falling back to the public homepage HTML.
+
 ## 2026-06-19
 
 ### Remove Browse Mode

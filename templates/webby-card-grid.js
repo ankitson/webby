@@ -322,7 +322,7 @@ export class WebbyCardGrid extends HTMLElement {
   }
 
   get previewBase() {
-    return this.getAttribute("preview-base") || "./.webby-previews/";
+    return this.getAttribute("preview-base") || "./webby-previews/";
   }
 
   render() {

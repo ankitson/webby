@@ -8,6 +8,8 @@ use crate::app::{AppEntry, list_apps};
 use crate::config::Bag;
 use crate::{Result, err};
 
+pub const PREVIEW_DIR: &str = "webby-previews";
+
 pub fn capture_previews(
     bag: &Bag,
     force: bool,
@@ -28,7 +30,7 @@ pub fn capture_previews(
         return Ok(());
     }
 
-    let out_dir = bag.dir.join(".webby-previews");
+    let out_dir = bag.dir.join(PREVIEW_DIR);
     fs::create_dir_all(&out_dir)?;
 
     let mut captured = 0usize;

@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::config::Bag;
+use crate::preview::PREVIEW_DIR;
 use crate::{Result, err};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -79,7 +80,7 @@ pub fn list_apps(bag: &Bag) -> Result<Vec<AppEntry>> {
     for entry in fs::read_dir(&bag.dir)? {
         let entry = entry?;
         let file_name = entry.file_name().to_string_lossy().to_string();
-        if file_name.starts_with('.') {
+        if file_name.starts_with('.') || file_name == PREVIEW_DIR {
             continue;
         }
         let path = entry.path();

@@ -49,7 +49,7 @@ An app is a folder with `index.html` or a standalone `.html` file. Names that
 start with `tmp` are shown under the Temp section in generated indexes.
 
 `webby preview -b BAG` captures static JPEG card previews into the bag's
-`.webby-previews/` directory. It shells out to `uvx shot-scraper`, skips
+`webby-previews/` directory. It shells out to `uvx shot-scraper`, skips
 existing previews unless `--force` is passed, and keeps generated indexes fast
 by serving images instead of live iframes. Pass an app name, for example
 `webby preview jobsearch-docs -b internal --force`, to refresh one preview.

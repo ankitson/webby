@@ -61,7 +61,7 @@ mod tests {
         assert!(html.contains("\"id\":\"alpha\""));
         assert!(html.contains("\"title\":\"alpha\""));
         assert!(html.contains("\"href\":\"./alpha/\""));
-        assert!(html.contains("\"previewUrl\":\"./.webby-previews/alpha.jpg\""));
+        assert!(html.contains("\"previewUrl\":\"./webby-previews/alpha.jpg\""));
         assert!(html.contains("\"id\":\"tmp-beta\""));
         assert!(html.contains("\"title\":\"beta\""));
         assert!(html.contains("\"tmp\":true"));
@@ -86,7 +86,7 @@ mod tests {
 
         assert!(json.contains("\"id\": \"alpha\""));
         assert!(json.contains("\"href\": \"./alpha/\""));
-        assert!(json.contains("\"previewUrl\": \"./.webby-previews/alpha.jpg\""));
+        assert!(json.contains("\"previewUrl\": \"./webby-previews/alpha.jpg\""));
     }
 
     #[test]

@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::app::AppEntry;
-use crate::preview::preview_slug;
+use crate::preview::{PREVIEW_DIR, preview_slug};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,7 +24,7 @@ pub fn from_app_entry(app: &AppEntry) -> CardItem {
         description: None,
         category: None,
         tmp: app.tmp,
-        preview_url: Some(format!("./.webby-previews/{}.jpg", preview_slug(&app.name))),
+        preview_url: Some(format!("./{}/{}.jpg", PREVIEW_DIR, preview_slug(&app.name))),
         icon: None,
     }
 }

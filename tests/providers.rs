@@ -101,6 +101,8 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     let caddy = tmp.path().join("caddy");
     write_named_app(&local, "app");
     write_named_app(&local, "other");
+    fs::create_dir_all(local.join("webby-previews")).unwrap();
+    fs::write(local.join("webby-previews").join("app.jpg"), "jpeg").unwrap();
     write_app(&caddy);
     let config = write_config(
         tmp.path(),
@@ -128,6 +130,8 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     );
     assert!(local.join("index.html").exists());
     assert!(String::from_utf8_lossy(&local_out.stdout).contains("http://localhost:7777"));
+    let local_manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
+    assert!(!local_manifest.contains("\"id\": \"webby-previews\""));
 
     let caddy_out = webby(tmp.path(), &config)
         .args(["deploy", "-b", "caddy"])
@@ -326,8 +330,8 @@ exit 0
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    assert!(local.join(".webby-previews").join("app.jpg").exists());
-    assert!(!local.join(".webby-previews").join("other.jpg").exists());
+    assert!(local.join("webby-previews").join("app.jpg").exists());
+    assert!(!local.join("webby-previews").join("other.jpg").exists());
 
     let log = fs::read_to_string(capture).unwrap();
     assert!(log.contains("uvx shot-scraper shot"));
