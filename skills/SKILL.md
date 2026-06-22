@@ -68,7 +68,7 @@ Pages publishes to the live internet and expects `CLOUDFLARE_ACCOUNT_ID` plus
 ## Common Commands
 
 ```sh
-webby add <path> [-b bag] [--name name] [--tmp]
+webby add <path> [-b bag] [--name name] [--tmp] [--title T] [--description D] [--property K=V]
 webby rm <name> [-b bag]
 webby open <name> [-b bag]
 webby domain <host> -b public
@@ -76,9 +76,27 @@ webby preview [app] -b <bag> [--force]
 webby init
 ```
 
+## App Metadata
+
+Apps can carry card metadata inside their own HTML. For standalone apps, put it
+in the `.html` file; for folder apps, put it in `index.html`.
+
+```html
+<script type="application/webby+json">
+{
+  "title": "Network Audit",
+  "description": "Internal network and DNS audit notes.",
+  "properties": { "category": "Documents" }
+}
+</script>
+```
+
+`webby add` and `webby pub` can write that block into the staged app with
+`--title`, `--description`, and repeatable `--property key=value`.
+
 ## Notes
 
 - Rust CLI; use `cargo install --path .` locally.
 - `-b` / `--bag` is the only bag selector. There is no `--public` flag.
-- `webby preview` captures static JPEG card previews into `.webby-previews/` via `uvx shot-scraper`; pass an app name to refresh a single preview.
+- `webby preview` captures static JPEG card previews into `webby-previews/` via `uvx shot-scraper`; pass an app name to refresh a single preview.
 - `command` providers can use `{dir}`, `{label}`, and `{url}` template values.
