@@ -246,6 +246,63 @@ fn generated_manifest_uses_app_owned_webby_metadata() {
 }
 
 #[test]
+fn add_can_write_metadata_properties_into_staged_app() {
+    let tmp = TestDir::new("add-metadata-flags");
+    let source = tmp.path().join("source");
+    let local = tmp.path().join("local");
+    fs::create_dir_all(&source).unwrap();
+    fs::write(
+        source.join("report.html"),
+        "<!doctype html><html><head><title>Old title</title></head><body>ok</body></html>",
+    )
+    .unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args([
+            "add",
+            source.join("report.html").to_str().unwrap(),
+            "--title",
+            "Network Report",
+            "--description",
+            "Self-contained metadata",
+            "--property",
+            "category=Documents",
+            "--property",
+            "kind=report",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let staged = fs::read_to_string(local.join("report.html")).unwrap();
+    assert!(staged.contains("application/webby+json"));
+    assert!(staged.contains("\"category\": \"Documents\""));
+    assert!(staged.contains("\"kind\": \"report\""));
+
+    let manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
+    assert!(manifest.contains("\"title\": \"Network Report\""));
+    assert!(manifest.contains("\"description\": \"Self-contained metadata\""));
+    assert!(manifest.contains("\"category\": \"Documents\""));
+    assert!(manifest.contains("\"kind\": \"report\""));
+}
+
+#[test]
 fn deploy_no_index_flag_skips_root_index_without_config_mode() {
     let tmp = TestDir::new("no-index-flag");
     let caddy = tmp.path().join("caddy");

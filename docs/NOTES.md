@@ -8,6 +8,7 @@ Decision:
 - Fall back to standard `<title>` and `<meta name="description">` when explicit Webby display fields are absent.
 - Keep `category` as a compatibility mirror of `properties.category`; the durable source of truth is the app-owned `properties` object.
 - Add generic `group-by-property` support to `<webby-card-grid>` so consumers can group by any property key.
+- Add `--title`, `--description`, and repeatable `--property KEY=VALUE` to `webby add` and `webby pub`; these flags write a Webby metadata block into the staged app before card generation.
 
 Verification:
 - `cargo fmt`

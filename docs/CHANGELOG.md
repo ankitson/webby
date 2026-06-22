@@ -7,10 +7,12 @@ Added:
 - Generic `properties` output in generated `webby-cards.json`.
 - Standard HTML metadata fallbacks for card `title` and `description` from `<title>` and `<meta name="description">`.
 - `<webby-card-grid group-by-property="...">` support for consumers that want to group by arbitrary properties.
+- Staging-time metadata flags on `webby add` and `webby pub`: `--title`, `--description`, and repeatable `--property KEY=VALUE`.
 
 Modified:
 - Generated cards now mirror string `properties.category` to the legacy top-level `category` field for compatibility.
 - The reusable card component preserves `item.properties` during normalization.
+- Metadata flags write into the staged app HTML before manifest generation, keeping the staged app self-contained.
 
 Why:
 - Card metadata should travel with the app artifact instead of living in a bag-level registry or manual generated-manifest edit.

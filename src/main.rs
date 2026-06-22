@@ -14,6 +14,7 @@ use std::path::PathBuf;
 
 use crate::app::{app_url, generate_index, list_apps, remove_app, stage_app};
 use crate::config::{Config, Host, sample_config};
+use crate::metadata::{MetadataOverrides, apply_app_metadata_overrides};
 use crate::preview::capture_previews;
 use crate::providers::{after_add, attach_domain, base_url, deploy_bag, open_app};
 
@@ -60,6 +61,15 @@ enum Command {
         name: Option<String>,
         #[arg(long)]
         tmp: bool,
+        /// Set the generated card title in the staged app metadata.
+        #[arg(long)]
+        title: Option<String>,
+        /// Set the generated card description in the staged app metadata.
+        #[arg(long)]
+        description: Option<String>,
+        /// Set an app metadata property as KEY=VALUE. Can be repeated.
+        #[arg(long = "property", value_name = "KEY=VALUE")]
+        properties: Vec<String>,
         /// Do not write the bag root index.html for this generation.
         #[arg(long)]
         no_index: bool,
@@ -71,6 +81,15 @@ enum Command {
         name: Option<String>,
         #[arg(long)]
         tmp: bool,
+        /// Set the generated card title in the staged app metadata.
+        #[arg(long)]
+        title: Option<String>,
+        /// Set the generated card description in the staged app metadata.
+        #[arg(long)]
+        description: Option<String>,
+        /// Set an app metadata property as KEY=VALUE. Can be repeated.
+        #[arg(long = "property", value_name = "KEY=VALUE")]
+        properties: Vec<String>,
         /// Do not write the public bag root index.html for this publish.
         #[arg(long)]
         no_index: bool,
@@ -166,6 +185,9 @@ fn run() -> Result<()> {
             bag,
             name,
             tmp,
+            title,
+            description,
+            properties,
             no_index,
         } => cmd_add(
             &Config::load()?,
@@ -173,14 +195,25 @@ fn run() -> Result<()> {
             bag.as_deref(),
             name.as_deref(),
             tmp,
+            metadata_overrides(title, description, properties)?,
             no_index,
         ),
         Command::Pub {
             path,
             name,
             tmp,
+            title,
+            description,
+            properties,
             no_index,
-        } => cmd_pub(&Config::load()?, path, name.as_deref(), tmp, no_index),
+        } => cmd_pub(
+            &Config::load()?,
+            path,
+            name.as_deref(),
+            tmp,
+            metadata_overrides(title, description, properties)?,
+            no_index,
+        ),
         Command::Deploy {
             bag,
             port,
@@ -229,10 +262,16 @@ fn cmd_add(
     bag: Option<&str>,
     name: Option<&str>,
     tmp: bool,
+    metadata: MetadataOverrides,
     no_index: bool,
 ) -> Result<()> {
     let bag = with_no_index(select_bag(cfg, bag)?, no_index);
     let staged = stage_app(&path, &bag, name, tmp)?;
+    apply_app_metadata_overrides(
+        &staged_app_path(&bag, &staged.name, staged.is_dir),
+        staged.is_dir,
+        &metadata,
+    )?;
     generate_index(&bag)?;
     after_add(&bag)?;
 
@@ -277,12 +316,56 @@ fn cmd_pub(
     path: PathBuf,
     name: Option<&str>,
     tmp: bool,
+    metadata: MetadataOverrides,
     no_index: bool,
 ) -> Result<()> {
     let bag = with_no_index(cfg.bag("public")?, no_index);
     let staged = stage_app(&path, &bag, name, tmp)?;
+    apply_app_metadata_overrides(
+        &staged_app_path(&bag, &staged.name, staged.is_dir),
+        staged.is_dir,
+        &metadata,
+    )?;
     println!("✓ {} → public bag", staged.name);
     deploy_bag(&bag, None)
+}
+
+fn staged_app_path(bag: &config::Bag, name: &str, is_dir: bool) -> PathBuf {
+    if is_dir {
+        bag.dir.join(name)
+    } else {
+        bag.dir.join(format!("{name}.html"))
+    }
+}
+
+fn metadata_overrides(
+    title: Option<String>,
+    description: Option<String>,
+    properties: Vec<String>,
+) -> Result<MetadataOverrides> {
+    let mut overrides = MetadataOverrides {
+        title,
+        description,
+        ..MetadataOverrides::default()
+    };
+    for property in properties {
+        let Some((key, value)) = property.split_once('=') else {
+            return Err(err(format!(
+                "invalid --property '{property}' (expected KEY=VALUE)"
+            )));
+        };
+        let key = key.trim();
+        if key.is_empty() {
+            return Err(err(format!(
+                "invalid --property '{property}' (key must not be empty)"
+            )));
+        }
+        overrides.properties.insert(
+            key.to_string(),
+            serde_json::Value::String(value.trim().to_string()),
+        );
+    }
+    Ok(overrides)
 }
 
 fn cmd_ls(cfg: &Config, bag: Option<&str>) -> Result<()> {

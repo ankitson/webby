@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use crate::{Result, err};
 
@@ -12,6 +12,19 @@ pub struct AppMetadata {
     pub title: Option<String>,
     pub description: Option<String>,
     pub properties: BTreeMap<String, Value>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct MetadataOverrides {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub properties: BTreeMap<String, Value>,
+}
+
+impl MetadataOverrides {
+    pub fn is_empty(&self) -> bool {
+        self.title.is_none() && self.description.is_none() && self.properties.is_empty()
+    }
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -44,6 +57,59 @@ pub fn read_app_metadata(path: &Path, is_dir: bool) -> Result<AppMetadata> {
     })
 }
 
+pub fn apply_app_metadata_overrides(
+    path: &Path,
+    is_dir: bool,
+    overrides: &MetadataOverrides,
+) -> Result<()> {
+    if overrides.is_empty() {
+        return Ok(());
+    }
+
+    let html_path = if is_dir {
+        path.join("index.html")
+    } else {
+        path.to_path_buf()
+    };
+    if !html_path.exists() {
+        return Err(err(format!(
+            "cannot write webby metadata because {} does not exist",
+            html_path.display()
+        )));
+    }
+
+    let html = fs::read_to_string(&html_path)
+        .map_err(|e| err(format!("failed to read {}: {e}", html_path.display())))?;
+    let mut metadata = parse_metadata(&html).map_err(|e| {
+        err(format!(
+            "failed to parse webby metadata in {}: {e}",
+            html_path.display()
+        ))
+    })?;
+
+    if let Some(title) = &overrides.title {
+        metadata.title = clean(Some(title.clone()));
+    }
+    if let Some(description) = &overrides.description {
+        metadata.description = clean(Some(description.clone()));
+    }
+    for (key, value) in &overrides.properties {
+        metadata.properties.insert(key.clone(), value.clone());
+    }
+
+    let block = render_metadata_block(&metadata)?;
+    let updated = if let Some((start, end)) = find_webby_script_range(&html) {
+        format!("{}{}{}", &html[..start], block, &html[end..])
+    } else if let Some(head_close) = html.to_ascii_lowercase().find("</head>") {
+        format!("{}{}\n{}", &html[..head_close], block, &html[head_close..])
+    } else {
+        format!("{block}\n{html}")
+    };
+
+    fs::write(&html_path, updated)
+        .map_err(|e| err(format!("failed to write {}: {e}", html_path.display())))
+}
+
 fn parse_metadata(html: &str) -> std::result::Result<AppMetadata, serde_json::Error> {
     let mut metadata = if let Some(json) = extract_webby_json(html) {
         let raw: RawMetadata = serde_json::from_str(json.trim())?;
@@ -73,6 +139,16 @@ fn parse_metadata(html: &str) -> std::result::Result<AppMetadata, serde_json::Er
 }
 
 fn extract_webby_json(html: &str) -> Option<&str> {
+    let (_, open_end, close_start, _) = find_webby_script_parts(html)?;
+    Some(&html[open_end + 1..close_start])
+}
+
+fn find_webby_script_range(html: &str) -> Option<(usize, usize)> {
+    let (start, _, _, close_end) = find_webby_script_parts(html)?;
+    Some((start, close_end))
+}
+
+fn find_webby_script_parts(html: &str) -> Option<(usize, usize, usize, usize)> {
     let lower = html.to_ascii_lowercase();
     let mut offset = 0;
     while let Some(relative_start) = lower[offset..].find("<script") {
@@ -86,7 +162,8 @@ fn extract_webby_json(html: &str) -> Option<&str> {
         {
             let content_start = open_end + 1;
             let close = lower[content_start..].find("</script>")? + content_start;
-            return Some(&html[content_start..close]);
+            let close_end = close + "</script>".len();
+            return Some((start, open_end, close, close_end));
         }
         offset = open_end + 1;
     }
@@ -189,6 +266,34 @@ fn clean(value: Option<String>) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
+fn render_metadata_block(metadata: &AppMetadata) -> Result<String> {
+    let mut object = Map::new();
+    if let Some(title) = &metadata.title {
+        object.insert("title".to_string(), Value::String(title.clone()));
+    }
+    if let Some(description) = &metadata.description {
+        object.insert(
+            "description".to_string(),
+            Value::String(description.clone()),
+        );
+    }
+    object.insert(
+        "properties".to_string(),
+        Value::Object(
+            metadata
+                .properties
+                .iter()
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect(),
+        ),
+    );
+    let json = serde_json::to_string_pretty(&Value::Object(object))
+        .map_err(|e| err(format!("failed to serialize webby metadata: {e}")))?;
+    Ok(format!(
+        "<script type=\"application/webby+json\">\n{json}\n</script>"
+    ))
+}
+
 fn html_unescape(value: &str) -> String {
     value
         .replace("&quot;", "\"")
@@ -254,5 +359,35 @@ mod tests {
         assert_eq!(metadata.title.as_deref(), Some("Docs & Notes"));
         assert_eq!(metadata.description.as_deref(), Some("A \"short\" note"));
         assert!(metadata.properties.is_empty());
+    }
+
+    #[test]
+    fn replaces_existing_metadata_block() {
+        let html = r#"<html><head><script type="application/webby+json">
+{"properties":{"category":"Old"}}
+</script></head></html>"#;
+        let mut metadata = parse_metadata(html).unwrap();
+        metadata.properties.insert(
+            "category".to_string(),
+            Value::String("Documents".to_string()),
+        );
+        metadata.title = Some("Updated".to_string());
+        let block = render_metadata_block(&metadata).unwrap();
+        let (start, end) = find_webby_script_range(html).unwrap();
+        let updated = format!("{}{}{}", &html[..start], block, &html[end..]);
+
+        assert_eq!(
+            parse_metadata(&updated)
+                .unwrap()
+                .properties
+                .get("category")
+                .and_then(Value::as_str),
+            Some("Documents")
+        );
+        assert_eq!(
+            parse_metadata(&updated).unwrap().title.as_deref(),
+            Some("Updated")
+        );
+        assert_eq!(updated.matches("application/webby+json").count(), 1);
     }
 }

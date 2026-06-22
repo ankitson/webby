@@ -30,8 +30,8 @@ A bag is a named directory plus a hosting provider. Apps are copied into a bag,
 then the provider decides how that directory gets a URL.
 
 ```sh
-webby add <path> [--name N] [--tmp] [-b BAG]
-webby pub <path> [--name N] [--tmp]
+webby add <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [-b BAG]
+webby pub <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V]
 webby deploy -b BAG
 webby preview [APP] -b BAG [--force]
 webby serve [-b BAG] [--port N]
@@ -87,6 +87,18 @@ those properties however they want, for example grouping by
 
 For compatibility with older card consumers, a string `properties.category`
 also appears as the generated card's top-level `category` field.
+
+You can also set metadata while staging an app. Webby writes the metadata into
+the staged HTML app and then regenerates card data from that self-contained
+artifact:
+
+```sh
+webby add ./network-audit.html -b internal \
+  --title "Network Audit" \
+  --description "Internal network and DNS audit notes." \
+  --property category=Documents \
+  --property kind=report
+```
 
 ## Provider Examples
 
