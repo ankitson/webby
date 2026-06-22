@@ -2,9 +2,10 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::config::Bag;
+use crate::config::{Bag, IndexChrome};
 use crate::metadata::{AppMetadata, read_app_metadata};
 use crate::preview::PREVIEW_DIR;
+use crate::render::IndexChromeContent;
 use crate::{Result, err};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -143,12 +144,39 @@ pub fn generate_index(bag: &Bag) -> Result<Vec<AppEntry>> {
     if bag.no_index {
         remove_any(&bag.dir.join("index.html"))?;
     } else {
+        let chrome = read_index_chrome(bag.index_chrome.as_ref())?;
         fs::write(
             bag.dir.join("index.html"),
-            crate::render::render_index(&apps, "webby"),
+            crate::render::render_index(&apps, "webby", &chrome),
         )?;
     }
     Ok(apps)
+}
+
+fn read_index_chrome(chrome: Option<&IndexChrome>) -> Result<IndexChromeContent> {
+    let Some(chrome) = chrome else {
+        return Ok(IndexChromeContent::default());
+    };
+
+    Ok(IndexChromeContent {
+        head: read_optional_fragment(chrome.head.as_deref())?,
+        body: read_optional_fragment(chrome.body.as_deref())?,
+    })
+}
+
+fn read_optional_fragment(path: Option<&Path>) -> Result<String> {
+    let Some(path) = path else {
+        return Ok(String::new());
+    };
+    if !path.exists() {
+        return Ok(String::new());
+    }
+    fs::read_to_string(path).map_err(|e| {
+        err(format!(
+            "failed to read index chrome {}: {e}",
+            path.display()
+        ))
+    })
 }
 
 pub fn app_url(base_url: &str, name: &str, is_dir: bool) -> String {

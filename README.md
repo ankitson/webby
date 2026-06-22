@@ -196,6 +196,24 @@ Set `noIndex: true` on a bag, or pass `--no-index` to `add`, `pub`, `deploy`,
 or `serve`, when a larger site consumes the card data and the bag should not
 publish its own root index page.
 
+Set `indexChromeDir` on a bag to inline optional `head.html` and `body.html`
+fragments into the generated root index. This is intended for host-site chrome
+such as a shared header while keeping webby itself generic:
+
+```json
+{
+  "bags": {
+    "public": {
+      "dir": "~/.local/share/webby/public",
+      "indexChromeDir": "~/site-chrome/dist",
+      "host": { "type": "cloudflare-pages", "project": "webby" }
+    }
+  }
+}
+```
+
+Use `WEBBY_INDEX_CHROME_DIR` to apply the same chrome directory to every bag.
+
 Caddy-hosted bags do not get a special listing mode. They can either expose the
 normal generated Webby index, or set `noIndex` when another homepage owns the
 root experience.
