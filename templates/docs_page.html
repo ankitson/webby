@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }} - {{ site_title }}</title>
+  {% if is_home %}{{ webby_metadata | safe }}{% endif %}
+  <style>
+{{ css | safe }}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar" aria-label="Docs">
+    <a class="brand" href="{{ root_href }}">{{ site_title }}</a>
+    {{ nav_html | safe }}
+  </nav>
+  <main class="content">
+    <article class="article">
+      {% if source_path %}<p class="eyebrow">{{ source_path }}</p>{% endif %}
+      <h1>{{ page_title }}</h1>
+      {% if description %}<p class="description">{{ description }}</p>{% endif %}
+      {% if meta_html %}<div class="meta">{{ meta_html | safe }}</div>{% endif %}
+      <div class="body">
+        {{ body_html | safe }}
+      </div>
+    </article>
+  </main>
+</div>
+</body>
+</html>

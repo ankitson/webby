@@ -353,6 +353,156 @@ fn add_can_write_metadata_properties_into_staged_app() {
 }
 
 #[test]
+fn docs_generates_static_app_from_markdown_directory() {
+    let tmp = TestDir::new("docs-markdown");
+    let source = tmp.path().join("source-docs");
+    let local = tmp.path().join("local");
+    fs::create_dir_all(source.join("guide")).unwrap();
+    fs::create_dir_all(source.join("assets")).unwrap();
+    fs::create_dir_all(source.join(".git")).unwrap();
+    fs::write(
+        source.join("index.md"),
+        r#"---
+type: Knowledge Bundle
+title: Source Docs
+description: Human and agent readable notes.
+tags: [docs, okf]
+---
+
+Welcome to **Source Docs**.
+
+See [Setup](guide/setup.md#install) and ![Diagram](assets/diagram.txt).
+
+<script>alert(1)</script>
+"#,
+    )
+    .unwrap();
+    fs::write(
+        source.join("guide").join("setup.md"),
+        r#"---
+type: Runbook
+title: Setup Guide
+---
+
+# Ignored fallback
+
+Install things.
+"#,
+    )
+    .unwrap();
+    fs::write(source.join("assets").join("diagram.txt"), "diagram").unwrap();
+    fs::write(source.join(".git").join("HEAD"), "secret").unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args([
+            "docs",
+            source.to_str().unwrap(),
+            "--name",
+            "source-docs",
+            "--property",
+            "category=Documents",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let app = local.join("source-docs");
+    assert!(app.join("index.html").exists());
+    assert!(app.join("guide").join("setup.html").exists());
+    assert!(app.join("assets").join("diagram.txt").exists());
+    assert!(!app.join(".git").exists());
+
+    let index = fs::read_to_string(app.join("index.html")).unwrap();
+    assert!(index.contains("Source Docs"));
+    assert!(index.contains("Human and agent readable notes."));
+    assert!(index.contains("href=\"guide/setup.html#install\""));
+    assert!(index.contains("src=\"assets/diagram.txt\""));
+    assert!(index.contains("&lt;script&gt;alert(1)&lt;/script&gt;"));
+    assert!(!index.contains("<script>alert(1)</script>"));
+    assert!(index.contains("application/webby+json"));
+    assert!(index.contains("\"kind\": \"markdown-docs\""));
+    assert!(index.contains("\"category\": \"Documents\""));
+    let setup = fs::read_to_string(app.join("guide").join("setup.html")).unwrap();
+    assert!(setup.contains("href=\"../index.html\""));
+    assert!(setup.contains("aria-current=\"page\""));
+
+    let manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
+    assert!(manifest.contains("\"id\": \"source-docs\""));
+    assert!(manifest.contains("\"title\": \"Source Docs\""));
+    assert!(manifest.contains("\"category\": \"Documents\""));
+}
+
+#[test]
+fn docs_synthesizes_home_and_does_not_copy_outside_root_links() {
+    let tmp = TestDir::new("docs-synthetic-home");
+    let source = tmp.path().join("notes");
+    let local = tmp.path().join("local");
+    let outside = tmp.path().join("secret.md");
+    fs::create_dir_all(&source).unwrap();
+    fs::write(&outside, "# Secret\n").unwrap();
+    fs::write(
+        source.join("README.md"),
+        r#"# Notes
+
+[Outside](../secret.md)
+"#,
+    )
+    .unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args([
+            "docs",
+            source.to_str().unwrap(),
+            "--name",
+            "notes",
+            "--title",
+            "Notes",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    assert!(local.join("notes").join("index.html").exists());
+    assert!(local.join("notes").join("readme.html").exists());
+    assert!(!local.join("notes").join("secret.html").exists());
+    let readme = fs::read_to_string(local.join("notes").join("readme.html")).unwrap();
+    assert!(readme.contains("href=\"../secret.md\""));
+    assert!(!readme.contains("file://"));
+}
+
+#[test]
 fn deploy_no_index_flag_skips_root_index_without_config_mode() {
     let tmp = TestDir::new("no-index-flag");
     let caddy = tmp.path().join("caddy");

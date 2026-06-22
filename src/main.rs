@@ -1,6 +1,7 @@
 mod app;
 mod cards;
 mod config;
+mod docs;
 mod metadata;
 mod preview;
 mod providers;
@@ -14,6 +15,7 @@ use std::path::PathBuf;
 
 use crate::app::{app_url, generate_index, list_apps, remove_app, stage_app};
 use crate::config::{Config, Host, sample_config};
+use crate::docs::{DocsOptions, build_docs_app};
 use crate::metadata::{MetadataOverrides, apply_app_metadata_overrides};
 use crate::preview::capture_previews;
 use crate::providers::{after_add, attach_domain, base_url, deploy_bag, open_app};
@@ -70,6 +72,34 @@ enum Command {
         /// Set an app metadata property as KEY=VALUE. Can be repeated.
         #[arg(long = "property", value_name = "KEY=VALUE")]
         properties: Vec<String>,
+        /// Do not write the bag root index.html for this generation.
+        #[arg(long)]
+        no_index: bool,
+    },
+    /// Generate and stage a static docs app from a Markdown directory.
+    Docs {
+        path: PathBuf,
+        #[arg(short = 'b', long = "bag")]
+        bag: Option<String>,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        tmp: bool,
+        /// Set the generated docs card/site title.
+        #[arg(long)]
+        title: Option<String>,
+        /// Set the generated docs card/site description.
+        #[arg(long)]
+        description: Option<String>,
+        /// Set an app metadata property as KEY=VALUE. Can be repeated.
+        #[arg(long = "property", value_name = "KEY=VALUE")]
+        properties: Vec<String>,
+        /// Maximum directory depth to scan below the source root.
+        #[arg(long, default_value_t = 3)]
+        depth: usize,
+        /// Maximum linked asset size to copy in MiB. Use 0 for no limit.
+        #[arg(long, default_value_t = 25)]
+        max_asset_size_mib: u64,
         /// Do not write the bag root index.html for this generation.
         #[arg(long)]
         no_index: bool,
@@ -196,6 +226,32 @@ fn run() -> Result<()> {
             name.as_deref(),
             tmp,
             metadata_overrides(title, description, properties)?,
+            no_index,
+        ),
+        Command::Docs {
+            path,
+            bag,
+            name,
+            tmp,
+            title,
+            description,
+            properties,
+            depth,
+            max_asset_size_mib,
+            no_index,
+        } => cmd_docs(
+            &Config::load()?,
+            path,
+            bag.as_deref(),
+            DocsOptions {
+                name,
+                tmp,
+                title,
+                description,
+                properties: metadata_properties(properties)?,
+                depth,
+                max_asset_size: max_asset_size_mib.saturating_mul(1024 * 1024),
+            },
             no_index,
         ),
         Command::Pub {
@@ -330,6 +386,56 @@ fn cmd_pub(
     deploy_bag(&bag, None)
 }
 
+fn cmd_docs(
+    cfg: &Config,
+    path: PathBuf,
+    bag: Option<&str>,
+    options: DocsOptions,
+    no_index: bool,
+) -> Result<()> {
+    let bag = with_no_index(select_bag(cfg, bag)?, no_index);
+    let docs = build_docs_app(&path, &bag.dir, &options)?;
+    generate_index(&bag)?;
+    after_add(&bag)?;
+    println!(
+        "✓ generated {} docs pages → {} bag",
+        docs.page_count, bag.label
+    );
+    match &bag.host {
+        Host::CloudflarePages { .. } => {
+            println!(
+                "  staged: {}  (run `webby deploy -b {}` to publish)",
+                app_url(&base_url(&bag, None), &docs.name, true),
+                bag.label
+            );
+        }
+        Host::Local { .. } => {
+            println!(
+                "  staged: {}/  (run `webby serve -b {}` for {})",
+                docs.name,
+                bag.label,
+                base_url(&bag, None)
+            );
+        }
+        Host::TailscaleServe { .. } | Host::TailscaleFunnel { .. } => {
+            println!(
+                "  url: {}",
+                app_url(&base_url(&bag, None), &docs.name, true)
+            );
+            println!(
+                "  run `webby deploy -b {}` to activate {}",
+                bag.label,
+                host_name(&bag.host)
+            );
+        }
+        _ => println!(
+            "  url: {}",
+            app_url(&base_url(&bag, None), &docs.name, true)
+        ),
+    }
+    Ok(())
+}
+
 fn staged_app_path(bag: &config::Bag, name: &str, is_dir: bool) -> PathBuf {
     if is_dir {
         bag.dir.join(name)
@@ -348,6 +454,14 @@ fn metadata_overrides(
         description,
         ..MetadataOverrides::default()
     };
+    overrides.properties = metadata_properties(properties)?;
+    Ok(overrides)
+}
+
+fn metadata_properties(
+    properties: Vec<String>,
+) -> Result<std::collections::BTreeMap<String, serde_json::Value>> {
+    let mut parsed = std::collections::BTreeMap::new();
     for property in properties {
         let Some((key, value)) = property.split_once('=') else {
             return Err(err(format!(
@@ -360,12 +474,12 @@ fn metadata_overrides(
                 "invalid --property '{property}' (key must not be empty)"
             )));
         }
-        overrides.properties.insert(
+        parsed.insert(
             key.to_string(),
             serde_json::Value::String(value.trim().to_string()),
         );
     }
-    Ok(overrides)
+    Ok(parsed)
 }
 
 fn cmd_ls(cfg: &Config, bag: Option<&str>) -> Result<()> {

@@ -1,3 +1,20 @@
+## 2026-06-22 — Markdown Docs App Generation
+
+Goal: let Webby publish a directory of Markdown files as a normal static app, similar in convenience to `docme`, while keeping the generated output self-contained and provider-agnostic.
+
+Decision:
+- Add `webby docs <dir>` as a new command rather than overloading `webby add`.
+- Generate a normal folder app inside the selected bag, then reuse existing bag index/card manifest generation and providers.
+- Render Markdown natively with `pulldown-cmark`; do not shell out to MkDocs or require Python at runtime.
+- Parse optional YAML frontmatter permissively with `serde_yml`, using OKF-style fields such as `type`, `title`, `description`, `resource`, `tags`, and `timestamp` when present.
+- Escape raw HTML by default.
+- Rewrite only links to files that canonicalize inside the selected Markdown root. Outside-root links are left unchanged and are not copied, avoiding `file://` leaks in published output.
+- Copy linked in-root assets subject to a max asset size and skip heavy/generated directories such as `.git`, `.wrangler`, `node_modules`, `logs`, and `target`.
+
+Verification:
+- `cargo fmt`
+- `cargo test`
+
 ## 2026-06-22 — App-Owned Card Metadata
 
 Goal: make card metadata first-class without adding a bag-level metadata database or making categories a hard-coded Webby concept.
@@ -209,6 +226,19 @@ Decision:
 - Consume generated `site-header.html` and `site-header.css` partials from the blog repo's shared site-chrome generator.
 - Replace the local public/internal mini nav with the cross-site writing/projects/GitHub/RSS header.
 - Mark `projects` active on the webby index while the blog marks `writing` active.
+
+## 2026-06-22 — Mini Page Load Flash
+
+Goal: remove the white flash and late preview-image pop-in on `https://mini.ankitson.com`.
+
+Discovery:
+- Firefox profiler evidence showed the previous page set `data-theme` from the body script around +394 ms, after the initial document/CSS path had already started.
+- Preview images were not discovered until the card-grid module loaded and rendered around +590 ms, with first image paint around +706 ms.
+
+Decision:
+- Emit a module preload for `webby-card-grid.js` and preload the first bounded set of preview images from the generated index head.
+- Reserve initial space for the not-yet-upgraded `webby-card-grid` element so the page does not appear empty before the module renders.
+- Keep host theme bootstrapping in the blog-owned site chrome artifact, not in webby core.
 
 ## 2026-06-21 — Shared Header Theme Parity
 

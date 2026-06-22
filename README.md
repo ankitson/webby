@@ -31,6 +31,7 @@ then the provider decides how that directory gets a URL.
 
 ```sh
 webby add <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [-b BAG]
+webby docs <dir> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [-b BAG]
 webby pub <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V]
 webby deploy -b BAG
 webby preview [APP] -b BAG [--force]
@@ -99,6 +100,32 @@ webby add ./network-audit.html -b internal \
   --property category=Documents \
   --property kind=report
 ```
+
+## Markdown Docs
+
+Point Webby at a directory of Markdown files to generate a static docs app and
+stage it into any bag:
+
+```sh
+webby docs ./docs -b internal \
+  --name project-docs \
+  --title "Project Docs" \
+  --property category=Documents
+```
+
+Webby scans Markdown files within `--depth` directories below the source root
+(default `3`), renders them with a sidebar, copies linked in-root assets up to
+`--max-asset-size-mib` MiB each (default `25`), rewrites in-root `.md` links to
+generated `.html` pages, and then regenerates the bag index/card manifest.
+
+Markdown frontmatter is optional and permissive. `title` and `description`
+control page display; OKF-style fields such as `type`, `resource`, `tags`, and
+`timestamp` are shown when present. Unknown fields are tolerated.
+
+If the directory has an `index.md`, that becomes the docs app homepage. If not,
+Webby writes a generated homepage that links to the discovered pages. Raw HTML
+inside Markdown is escaped by default. Links outside the selected root are left
+unchanged and are not copied into the generated app.
 
 ## Provider Examples
 

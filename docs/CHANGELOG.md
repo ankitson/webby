@@ -1,5 +1,32 @@
 ## 2026-06-22
 
+### Markdown Docs App Generation
+
+Added:
+- `webby docs <dir>` for generating a static docs app from a directory of Markdown files and staging it into a bag.
+- Native Markdown rendering with tables, task lists, strikethrough, sidebar navigation, generated docs CSS, and one static HTML page per Markdown file.
+- Permissive YAML frontmatter support for display metadata, including OKF-style `type`, `title`, `description`, `resource`, `tags`, and `timestamp` fields.
+- Local in-root link rewriting from `.md` links to generated `.html` pages.
+- Linked in-root asset copying with `--max-asset-size-mib`.
+- Depth-limited discovery with heavy/generated directory skipping.
+
+Modified:
+- The generated docs app embeds Webby metadata in its `index.html`, so it appears in `webby-cards.json` like any other app.
+
+Why:
+- Markdown docs should be publishable through Webby without moving them out of their owning repo or requiring a separate MkDocs/Python workflow.
+- The implementation follows the OKF spirit of Markdown plus frontmatter without making Webby an OKF validator or knowledge platform.
+
+### Mini Page Load Flash
+
+Modified:
+- Added generated `<link rel="modulepreload">` for the card-grid module.
+- Added generated high-priority image preloads for the first preview tiles.
+- Added initial reserved height for `webby-card-grid:not(:defined)`.
+
+Why:
+- The mini page should paint with its intended background and have preview images available before the custom element renders its cards.
+
 ### App-Owned Card Metadata
 
 Added:

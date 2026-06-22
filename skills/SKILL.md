@@ -69,6 +69,7 @@ Pages publishes to the live internet and expects `CLOUDFLARE_ACCOUNT_ID` plus
 
 ```sh
 webby add <path> [-b bag] [--name name] [--tmp] [--title T] [--description D] [--property K=V]
+webby docs <dir> [-b bag] [--name name] [--tmp] [--title T] [--description D] [--property K=V]
 webby rm <name> [-b bag]
 webby open <name> [-b bag]
 webby domain <host> -b public
@@ -93,6 +94,11 @@ in the `.html` file; for folder apps, put it in `index.html`.
 
 `webby add` and `webby pub` can write that block into the staged app with
 `--title`, `--description`, and repeatable `--property key=value`.
+
+Use `webby docs ./docs --name project-docs` to generate a static docs app from
+a Markdown directory. It renders Markdown natively, reads optional YAML
+frontmatter, rewrites in-root `.md` links, copies linked in-root assets, and
+stages the result like any other folder app.
 
 ## Notes
 
