@@ -16,7 +16,7 @@
   <webby-card-grid id="webby-grid" aria-label="Sites"></webby-card-grid>
   <script type="application/json" id="webby-card-data">{{ items_json | safe }}</script>
   <script type="module">
-    import "./webby-card-grid.js";
+    import "{{ component_src | safe }}";
 
     const data = document.getElementById("webby-card-data");
     const grid = document.getElementById("webby-grid");

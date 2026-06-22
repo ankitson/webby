@@ -69,6 +69,9 @@ Pages publishes to the live internet and expects `CLOUDFLARE_ACCOUNT_ID` plus
 
 ```sh
 webby add <path> [-b bag] [--name name] [--tmp] [--title T] [--description D] [--property K=V]
+webby link <path> [-b bag] [--name name] [--tmp] [--title T] [--description D] [--property K=V]
+webby unlink <name> [-b bag]
+webby view <name> [-b bag] --property K=V
 webby rm <name> [-b bag]
 webby open <name> [-b bag]
 webby domain <host> -b public
@@ -93,6 +96,12 @@ in the `.html` file; for folder apps, put it in `index.html`.
 
 `webby add` and `webby pub` can write that block into the staged app with
 `--title`, `--description`, and repeatable `--property key=value`.
+
+Use `webby link` when the source HTML should stay in another repo or docs
+folder. Link metadata is still written into the app HTML when flags are passed;
+the bag only keeps a hidden link registry and a managed static mount. Use
+`webby view <name> --property key=value` for repo-specific or category-specific
+generated indexes from the same app-owned metadata.
 
 ## Notes
 

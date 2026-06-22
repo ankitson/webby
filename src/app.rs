@@ -3,10 +3,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::config::{Bag, IndexChrome};
+use crate::links::{LINKS_FILE, sync_links};
 use crate::metadata::{AppMetadata, read_app_metadata};
 use crate::preview::PREVIEW_DIR;
-use crate::render::IndexChromeContent;
+use crate::render::{IndexChromeContent, render_index_with_base};
 use crate::{Result, err};
+
+pub const VIEWS_DIR: &str = "webby-views";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppEntry {
@@ -83,7 +86,11 @@ pub fn list_apps(bag: &Bag) -> Result<Vec<AppEntry>> {
     for entry in fs::read_dir(&bag.dir)? {
         let entry = entry?;
         let file_name = entry.file_name().to_string_lossy().to_string();
-        if file_name.starts_with('.') || file_name == PREVIEW_DIR {
+        if file_name.starts_with('.')
+            || file_name == PREVIEW_DIR
+            || file_name == VIEWS_DIR
+            || file_name == LINKS_FILE
+        {
             continue;
         }
         let path = entry.path();
@@ -132,6 +139,7 @@ pub fn remove_app(bag: &Bag, name: &str) -> Result<PathBuf> {
 
 pub fn generate_index(bag: &Bag) -> Result<Vec<AppEntry>> {
     fs::create_dir_all(&bag.dir)?;
+    sync_links(bag)?;
     let apps = list_apps(bag)?;
     fs::write(
         bag.dir.join("webby-cards.json"),
@@ -153,6 +161,25 @@ pub fn generate_index(bag: &Bag) -> Result<Vec<AppEntry>> {
     Ok(apps)
 }
 
+pub fn generate_view(bag: &Bag, name: &str, filters: &[(String, String)]) -> Result<Vec<AppEntry>> {
+    fs::create_dir_all(&bag.dir)?;
+    sync_links(bag)?;
+    let apps = list_apps(bag)?;
+    let filtered = apps
+        .into_iter()
+        .filter(|app| matches_filters(app, filters))
+        .collect::<Vec<_>>();
+    let clean = clean_view_name(name)?;
+    let view_dir = bag.dir.join(VIEWS_DIR).join(&clean);
+    fs::create_dir_all(&view_dir)?;
+    let chrome = read_index_chrome(bag.index_chrome.as_ref())?;
+    fs::write(
+        view_dir.join("index.html"),
+        render_index_with_base(&filtered, &clean, &chrome, "../.."),
+    )?;
+    Ok(filtered)
+}
+
 fn read_index_chrome(chrome: Option<&IndexChrome>) -> Result<IndexChromeContent> {
     let Some(chrome) = chrome else {
         return Ok(IndexChromeContent::default());
@@ -162,6 +189,37 @@ fn read_index_chrome(chrome: Option<&IndexChrome>) -> Result<IndexChromeContent>
         head: read_optional_fragment(chrome.head.as_deref())?,
         body: read_optional_fragment(chrome.body.as_deref())?,
     })
+}
+
+fn matches_filters(app: &AppEntry, filters: &[(String, String)]) -> bool {
+    filters.iter().all(|(key, value)| {
+        app.metadata
+            .properties
+            .get(key)
+            .map(|candidate| match candidate {
+                serde_json::Value::String(text) => text == value,
+                other => other.to_string() == *value,
+            })
+            .unwrap_or(false)
+    })
+}
+
+fn clean_view_name(name: &str) -> Result<String> {
+    let clean = name
+        .trim()
+        .trim_matches('/')
+        .trim_end_matches(".html")
+        .trim_end_matches("/index")
+        .to_string();
+    if clean.is_empty()
+        || clean.contains("..")
+        || clean
+            .split('/')
+            .any(|part| part.is_empty() || part.starts_with('.'))
+    {
+        return Err(err(format!("invalid view name '{name}'")));
+    }
+    Ok(clean)
 }
 
 fn read_optional_fragment(path: Option<&Path>) -> Result<String> {

@@ -1,7 +1,7 @@
 use minijinja::{Environment, context};
 
 use crate::app::AppEntry;
-use crate::cards::from_app_entry;
+use crate::cards::{from_app_entry, from_app_entry_with_base};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct IndexChromeContent {
@@ -19,15 +19,36 @@ fn make_env() -> Environment<'static> {
 }
 
 pub fn render_index(apps: &[AppEntry], title: &str, chrome: &IndexChromeContent) -> String {
-    let items = apps.iter().map(from_app_entry).collect::<Vec<_>>();
+    render_index_with_base(apps, title, chrome, ".")
+}
+
+pub fn render_index_with_base(
+    apps: &[AppEntry],
+    title: &str,
+    chrome: &IndexChromeContent,
+    resource_base: &str,
+) -> String {
+    let items = apps
+        .iter()
+        .map(|app| from_app_entry_with_base(app, resource_base))
+        .collect::<Vec<_>>();
     let items_json = serde_json::to_string(&items).expect("serialize card items");
+    let component_src = if resource_base == "." || resource_base.is_empty() {
+        "./webby-card-grid.js".to_string()
+    } else {
+        format!("{}/webby-card-grid.js", resource_base.trim_end_matches('/'))
+    };
 
     make_env()
         .get_template("index.html")
         .expect("index.html template")
-        .render(
-            context! { title, items_json, chrome_head => chrome.head, chrome_body => chrome.body },
-        )
+        .render(context! {
+            title,
+            items_json,
+            component_src,
+            chrome_head => chrome.head,
+            chrome_body => chrome.body,
+        })
         .expect("render index.html")
 }
 

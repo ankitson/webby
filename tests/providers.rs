@@ -353,6 +353,213 @@ fn add_can_write_metadata_properties_into_staged_app() {
 }
 
 #[test]
+fn link_registers_external_app_and_keeps_metadata_app_owned() {
+    let tmp = TestDir::new("link-app");
+    let source = tmp.path().join("repo-docs");
+    let local = tmp.path().join("local");
+    fs::create_dir_all(source.join(".git")).unwrap();
+    fs::create_dir_all(source.join("assets")).unwrap();
+    fs::write(
+        source.join("index.html"),
+        "<!doctype html><html><head><title>Old docs</title></head><body>docs</body></html>",
+    )
+    .unwrap();
+    fs::write(source.join(".git").join("HEAD"), "secret").unwrap();
+    fs::write(source.join(".env"), "token=secret").unwrap();
+    fs::write(source.join("assets").join("style.css"), "body{}").unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args([
+            "link",
+            source.to_str().unwrap(),
+            "--name",
+            "repo-docs",
+            "--title",
+            "Repo Docs",
+            "--description",
+            "Docs owned by another repository",
+            "--property",
+            "repo=repo-docs",
+            "--property",
+            "category=Documents",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    assert!(local.join(".webby-links.json").exists());
+    assert!(local.join("repo-docs").join("index.html").exists());
+    assert!(
+        local
+            .join("repo-docs")
+            .join("assets")
+            .join("style.css")
+            .exists()
+    );
+    assert!(!local.join("repo-docs").join(".git").exists());
+    assert!(!local.join("repo-docs").join(".env").exists());
+    assert!(source.join(".git").join("HEAD").exists());
+    assert!(source.join(".env").exists());
+
+    let source_html = fs::read_to_string(source.join("index.html")).unwrap();
+    assert!(source_html.contains("application/webby+json"));
+    assert!(source_html.contains("\"repo\": \"repo-docs\""));
+    assert!(source_html.contains("\"category\": \"Documents\""));
+
+    let manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
+    assert!(manifest.contains("\"title\": \"Repo Docs\""));
+    assert!(manifest.contains("\"description\": \"Docs owned by another repository\""));
+    assert!(manifest.contains("\"repo\": \"repo-docs\""));
+    assert!(manifest.contains("\"category\": \"Documents\""));
+
+    let unlink = webby(tmp.path(), &config)
+        .args(["unlink", "repo-docs"])
+        .output()
+        .unwrap();
+    assert!(
+        unlink.status.success(),
+        "{}",
+        String::from_utf8_lossy(&unlink.stderr)
+    );
+    assert!(!local.join("repo-docs").exists());
+    assert!(source.join("index.html").exists());
+    let manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
+    assert!(!manifest.contains("\"id\": \"repo-docs\""));
+}
+
+#[test]
+fn link_refuses_to_overwrite_existing_staged_app() {
+    let tmp = TestDir::new("link-collision");
+    let source = tmp.path().join("external-docs");
+    let local = tmp.path().join("local");
+    fs::create_dir_all(&source).unwrap();
+    fs::create_dir_all(local.join("docs")).unwrap();
+    fs::write(
+        source.join("index.html"),
+        "<!doctype html><html><head><title>External</title></head><body>external</body></html>",
+    )
+    .unwrap();
+    fs::write(
+        local.join("docs").join("index.html"),
+        "<!doctype html><h1>existing</h1>",
+    )
+    .unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args([
+            "link",
+            source.to_str().unwrap(),
+            "--name",
+            "docs",
+            "--title",
+            "Should Not Be Written",
+        ])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("already exists"));
+    let source_html = fs::read_to_string(source.join("index.html")).unwrap();
+    assert!(!source_html.contains("application/webby+json"));
+    assert!(!local.join(".webby-links.json").exists());
+}
+
+#[test]
+fn view_writes_filtered_index_by_metadata_property() {
+    let tmp = TestDir::new("view-filter");
+    let local = tmp.path().join("local");
+    fs::create_dir_all(local.join("job-docs")).unwrap();
+    fs::create_dir_all(local.join("other-docs")).unwrap();
+    fs::write(
+        local.join("job-docs").join("index.html"),
+        r#"<!doctype html><html><head>
+<script type="application/webby+json">
+{"title":"Job Search Docs","properties":{"repo":"jobsearch","category":"Documents"}}
+</script>
+</head><body>job</body></html>"#,
+    )
+    .unwrap();
+    fs::write(
+        local.join("other-docs").join("index.html"),
+        r#"<!doctype html><html><head>
+<script type="application/webby+json">
+{"title":"Other Docs","properties":{"repo":"other","category":"Documents"}}
+</script>
+</head><body>other</body></html>"#,
+    )
+    .unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args([
+            "view",
+            "jobsearch",
+            "-b",
+            "local",
+            "--property",
+            "repo=jobsearch",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let html = fs::read_to_string(
+        local
+            .join("webby-views")
+            .join("jobsearch")
+            .join("index.html"),
+    )
+    .unwrap();
+    assert!(html.contains("Job Search Docs"));
+    assert!(!html.contains("Other Docs"));
+    assert!(html.contains("import \"../../webby-card-grid.js\";"));
+    assert!(html.contains("\"href\":\"../../job-docs/\""));
+    assert!(html.contains("\"previewUrl\":\"../../webby-previews/job-docs.jpg\""));
+}
+
+#[test]
 fn deploy_no_index_flag_skips_root_index_without_config_mode() {
     let tmp = TestDir::new("no-index-flag");
     let caddy = tmp.path().join("caddy");

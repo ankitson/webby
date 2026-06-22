@@ -21,15 +21,22 @@ pub struct CardItem {
 }
 
 pub fn from_app_entry(app: &AppEntry) -> CardItem {
+    from_app_entry_with_base(app, ".")
+}
+
+pub fn from_app_entry_with_base(app: &AppEntry, resource_base: &str) -> CardItem {
     CardItem {
         id: app.name.clone(),
         title: display_title(app),
-        href: app.href.clone(),
+        href: prefix_resource(resource_base, &app.href),
         description: app.metadata.description.clone(),
         category: property_string(&app.metadata.properties, "category"),
         properties: app.metadata.properties.clone(),
         tmp: app.tmp,
-        preview_url: Some(format!("./{}/{}.jpg", PREVIEW_DIR, preview_slug(&app.name))),
+        preview_url: Some(prefix_resource(
+            resource_base,
+            &format!("./{}/{}.jpg", PREVIEW_DIR, preview_slug(&app.name)),
+        )),
         icon: None,
     }
 }
@@ -54,4 +61,16 @@ fn property_string(properties: &BTreeMap<String, Value>, key: &str) -> Option<St
         .get(key)
         .and_then(Value::as_str)
         .map(ToOwned::to_owned)
+}
+
+fn prefix_resource(resource_base: &str, value: &str) -> String {
+    if value.starts_with("http://") || value.starts_with("https://") || value.starts_with('/') {
+        return value.to_string();
+    }
+    let relative = value.strip_prefix("./").unwrap_or(value);
+    if resource_base == "." || resource_base.is_empty() {
+        format!("./{relative}")
+    } else {
+        format!("{}/{relative}", resource_base.trim_end_matches('/'))
+    }
 }

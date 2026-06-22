@@ -1,5 +1,23 @@
 ## 2026-06-22
 
+### Linked Apps and Filtered Views
+
+Added:
+- `webby link`, which registers an external `.html` file or folder app in a bag without copying its source.
+- `webby unlink`, which removes only the linked mount and registry entry while leaving the external source intact.
+- A hidden per-bag `.webby-links.json` registry for link identity and source paths.
+- Managed linked-directory mirrors made from file symlinks, with local/private names such as `.git`, `.env*`, `.wrangler`, `node_modules`, and `logs` skipped recursively.
+- `webby view <name> --property KEY=VALUE`, which writes a filtered index under `webby-views/<name>/index.html`.
+
+Modified:
+- Bag generation syncs linked app mounts before scanning apps, so linked and copied apps share the same manifest, preview, and deploy flows.
+- Generated indexes can now render from non-root locations by prefixing app, preview, and web component URLs.
+- `webby rm` now unlinks registered linked apps instead of deleting their external sources.
+
+Why:
+- Repos should be able to own their generated HTML docs and git history while still appearing on one central Webby homepage.
+- Repo-specific or project-specific homepages should be generated from the same app-owned metadata instead of hard-coded grouping logic.
+
 ### App-Owned Card Metadata
 
 Added:

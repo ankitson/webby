@@ -31,6 +31,9 @@ then the provider decides how that directory gets a URL.
 
 ```sh
 webby add <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [-b BAG]
+webby link <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [-b BAG]
+webby unlink <name> [-b BAG]
+webby view <name> --property K=V [-b BAG]
 webby pub <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V]
 webby deploy -b BAG
 webby preview [APP] -b BAG [--force]
@@ -99,6 +102,42 @@ webby add ./network-audit.html -b internal \
   --property category=Documents \
   --property kind=report
 ```
+
+## Linked Apps and Views
+
+Use `webby link` when another repo should keep owning its HTML docs and git
+history, but the app should still appear in a central Webby bag:
+
+```sh
+webby link ~/projects/job-search/docs -b internal \
+  --name jobsearch-docs \
+  --title "Job Search Docs" \
+  --property repo=job-search \
+  --property category=Documents
+```
+
+Linked apps are mounted into the bag instead of copied. Webby keeps a hidden
+`.webby-links.json` registry in the bag so deploys can recreate those mounts,
+but card metadata still lives in the linked app's own HTML. Passing `--title`,
+`--description`, or `--property` to `webby link` writes the same
+`application/webby+json` block into the linked source app.
+
+For linked directories, Webby creates a managed mirror made of file symlinks and
+skips local/private names such as `.git`, `.env*`, `.wrangler`, `node_modules`,
+and `logs`.
+
+`webby unlink <name>` removes only the Webby mount and registry entry. It never
+deletes the linked source directory or HTML file.
+
+Generate a specific filtered index from the same app metadata with
+`webby view`:
+
+```sh
+webby view job-search -b internal --property repo=job-search
+```
+
+That writes `webby-views/job-search/index.html`. Multiple `--property` filters
+are treated as AND conditions.
 
 ## Provider Examples
 

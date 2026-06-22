@@ -1,6 +1,7 @@
 mod app;
 mod cards;
 mod config;
+mod links;
 mod metadata;
 mod preview;
 mod providers;
@@ -12,8 +13,9 @@ use std::fmt;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::app::{app_url, generate_index, list_apps, remove_app, stage_app};
+use crate::app::{app_url, generate_index, generate_view, list_apps, remove_app, stage_app};
 use crate::config::{Config, Host, sample_config};
+use crate::links::{link_app, unlink_app, unlink_app_if_exists};
 use crate::metadata::{MetadataOverrides, apply_app_metadata_overrides};
 use crate::preview::capture_previews;
 use crate::providers::{after_add, attach_domain, base_url, deploy_bag, open_app};
@@ -73,6 +75,43 @@ enum Command {
         /// Do not write the bag root index.html for this generation.
         #[arg(long)]
         no_index: bool,
+    },
+    /// Mount an external .html file or folder into a bag without copying it.
+    Link {
+        path: PathBuf,
+        #[arg(short = 'b', long = "bag")]
+        bag: Option<String>,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        tmp: bool,
+        /// Set the linked app title in its app-owned metadata.
+        #[arg(long)]
+        title: Option<String>,
+        /// Set the linked app description in its app-owned metadata.
+        #[arg(long)]
+        description: Option<String>,
+        /// Set an app metadata property as KEY=VALUE. Can be repeated.
+        #[arg(long = "property", value_name = "KEY=VALUE")]
+        properties: Vec<String>,
+        /// Do not write the bag root index.html for this generation.
+        #[arg(long)]
+        no_index: bool,
+    },
+    /// Remove a linked app mount from a bag without deleting its source.
+    Unlink {
+        name: String,
+        #[arg(short = 'b', long = "bag")]
+        bag: Option<String>,
+    },
+    /// Generate a named filtered index under webby-views/.
+    View {
+        name: String,
+        #[arg(short = 'b', long = "bag")]
+        bag: Option<String>,
+        /// Keep cards whose metadata property matches KEY=VALUE. Can be repeated.
+        #[arg(long = "property", value_name = "KEY=VALUE")]
+        properties: Vec<String>,
     },
     /// Stage into the public bag and deploy it.
     Pub {
@@ -214,6 +253,35 @@ fn run() -> Result<()> {
             metadata_overrides(title, description, properties)?,
             no_index,
         ),
+        Command::Link {
+            path,
+            bag,
+            name,
+            tmp,
+            title,
+            description,
+            properties,
+            no_index,
+        } => cmd_link(
+            &Config::load()?,
+            path,
+            bag.as_deref(),
+            name.as_deref(),
+            tmp,
+            metadata_overrides(title, description, properties)?,
+            no_index,
+        ),
+        Command::Unlink { name, bag } => cmd_unlink(&Config::load()?, &name, bag.as_deref()),
+        Command::View {
+            name,
+            bag,
+            properties,
+        } => cmd_view(
+            &Config::load()?,
+            &name,
+            bag.as_deref(),
+            property_filters(properties)?,
+        ),
         Command::Deploy {
             bag,
             port,
@@ -330,6 +398,94 @@ fn cmd_pub(
     deploy_bag(&bag, None)
 }
 
+fn cmd_link(
+    cfg: &Config,
+    path: PathBuf,
+    bag: Option<&str>,
+    name: Option<&str>,
+    tmp: bool,
+    metadata: MetadataOverrides,
+    no_index: bool,
+) -> Result<()> {
+    let bag = with_no_index(select_bag(cfg, bag)?, no_index);
+    let linked = link_app(&path, &bag, name, tmp, &metadata)?;
+    generate_index(&bag)?;
+    after_add(&bag)?;
+
+    println!("✓ linked {} → {} bag", linked.name, bag.label);
+    println!("  source: {}", linked.source.display());
+    match &bag.host {
+        Host::CloudflarePages { .. } => {
+            println!(
+                "  staged: {}  (run `webby deploy -b {}` to publish)",
+                app_url(&base_url(&bag, None), &linked.name, linked.is_dir),
+                bag.label
+            );
+        }
+        Host::Local { .. } => {
+            println!(
+                "  linked: {}  (run `webby serve -b {}` for {})",
+                linked.materialized.display(),
+                bag.label,
+                base_url(&bag, None)
+            );
+        }
+        Host::TailscaleServe { .. } | Host::TailscaleFunnel { .. } => {
+            println!(
+                "  url: {}",
+                app_url(&base_url(&bag, None), &linked.name, linked.is_dir)
+            );
+            println!(
+                "  run `webby deploy -b {}` to activate {}",
+                bag.label,
+                host_name(&bag.host)
+            );
+        }
+        _ => println!(
+            "  url: {}",
+            app_url(&base_url(&bag, None), &linked.name, linked.is_dir)
+        ),
+    }
+    Ok(())
+}
+
+fn cmd_unlink(cfg: &Config, name: &str, bag: Option<&str>) -> Result<()> {
+    let bag = select_bag(cfg, bag)?;
+    let linked = unlink_app(bag, name)?;
+    generate_index(bag)?;
+    println!("✓ unlinked {} from {} bag", linked.name, bag.label);
+    println!("  source kept: {}", linked.source.display());
+    if matches!(bag.host, Host::CloudflarePages { .. }) {
+        println!(
+            "  run `webby deploy -b {}` to update the live site",
+            bag.label
+        );
+    }
+    Ok(())
+}
+
+fn cmd_view(
+    cfg: &Config,
+    name: &str,
+    bag: Option<&str>,
+    filters: Vec<(String, String)>,
+) -> Result<()> {
+    if filters.is_empty() {
+        return Err(err(
+            "webby view needs at least one --property KEY=VALUE filter",
+        ));
+    }
+    let bag = select_bag(cfg, bag)?;
+    let apps = generate_view(bag, name, &filters)?;
+    println!(
+        "✓ wrote {}/index.html with {} app{}",
+        bag.dir.join("webby-views").join(name).display(),
+        apps.len(),
+        if apps.len() == 1 { "" } else { "s" }
+    );
+    Ok(())
+}
+
 fn staged_app_path(bag: &config::Bag, name: &str, is_dir: bool) -> PathBuf {
     if is_dir {
         bag.dir.join(name)
@@ -368,6 +524,26 @@ fn metadata_overrides(
     Ok(overrides)
 }
 
+fn property_filters(properties: Vec<String>) -> Result<Vec<(String, String)>> {
+    properties
+        .into_iter()
+        .map(|property| {
+            let Some((key, value)) = property.split_once('=') else {
+                return Err(err(format!(
+                    "invalid --property '{property}' (expected KEY=VALUE)"
+                )));
+            };
+            let key = key.trim();
+            if key.is_empty() {
+                return Err(err(format!(
+                    "invalid --property '{property}' (key must not be empty)"
+                )));
+            }
+            Ok((key.to_string(), value.trim().to_string()))
+        })
+        .collect()
+}
+
 fn cmd_ls(cfg: &Config, bag: Option<&str>) -> Result<()> {
     if let Some(label) = bag {
         return print_bag_apps(cfg.bag(label)?);
@@ -401,9 +577,15 @@ fn print_bag_apps(bag: &config::Bag) -> Result<()> {
 
 fn cmd_rm(cfg: &Config, name: &str, bag: Option<&str>) -> Result<()> {
     let bag = select_bag(cfg, bag)?;
-    remove_app(bag, name)?;
-    generate_index(&bag)?;
-    println!("✓ removed {name} from {} bag", bag.label);
+    if let Some(linked) = unlink_app_if_exists(bag, name)? {
+        generate_index(bag)?;
+        println!("✓ unlinked {} from {} bag", linked.name, bag.label);
+        println!("  source kept: {}", linked.source.display());
+    } else {
+        remove_app(bag, name)?;
+        generate_index(bag)?;
+        println!("✓ removed {name} from {} bag", bag.label);
+    }
     if matches!(bag.host, Host::CloudflarePages { .. }) {
         println!(
             "  run `webby deploy -b {}` to update the live site",

@@ -1,3 +1,20 @@
+## 2026-06-22 — Linked Apps and Filtered Views
+
+Goal: let repos own their HTML docs and history while still feeding a central Webby homepage and repo-specific filtered pages.
+
+Decision:
+- Add `webby link` for external `.html` files and folder apps. The bag records only link identity and source path in `.webby-links.json`; card metadata remains app-owned HTML metadata.
+- Let `webby link --title/--description/--property` write the metadata block into the linked source app, matching the `webby add` behavior while preserving the external repo as the source of truth.
+- Use managed mirror mounts for linked directories instead of raw directory symlinks, so static hosting does not expose `.git`, `.env*`, `.wrangler`, `node_modules`, or `logs`.
+- Add `webby unlink` and make `webby rm` unlink registered linked apps without deleting the external source.
+- Add `webby view <name> --property KEY=VALUE`, generating `webby-views/<name>/index.html` from the same scanned card data with ANDed property filters.
+- Keep generated views relocatable by prefixing card hrefs, preview URLs, and the web component import from the view's directory back to the bag root.
+
+Verification:
+- `cargo clean -p webby-deploy`
+- `cargo run -- --help`
+- `cargo test`
+
 ## 2026-06-22 — App-Owned Card Metadata
 
 Goal: make card metadata first-class without adding a bag-level metadata database or making categories a hard-coded Webby concept.
