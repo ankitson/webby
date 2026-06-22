@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::config::Bag;
+use crate::metadata::{AppMetadata, read_app_metadata};
 use crate::preview::PREVIEW_DIR;
 use crate::{Result, err};
 
@@ -12,6 +13,7 @@ pub struct AppEntry {
     pub is_dir: bool,
     pub href: String,
     pub tmp: bool,
+    pub metadata: AppMetadata,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -87,20 +89,24 @@ pub fn list_apps(bag: &Bag) -> Result<Vec<AppEntry>> {
         let meta = fs::metadata(&path).ok();
         if meta.as_ref().map(|m| m.is_dir()).unwrap_or(false) {
             let tmp = file_name.starts_with("tmp");
+            let metadata = read_app_metadata(&path, true)?;
             apps.push(AppEntry {
                 name: file_name.clone(),
                 is_dir: true,
                 href: format!("./{file_name}/"),
                 tmp,
+                metadata,
             });
         } else if file_name.to_lowercase().ends_with(".html") && file_name != "index.html" {
             let name = file_name.trim_end_matches(".html").to_string();
             let tmp = name.starts_with("tmp");
+            let metadata = read_app_metadata(&path, false)?;
             apps.push(AppEntry {
                 name: name.clone(),
                 is_dir: false,
                 href: format!("./{file_name}"),
                 tmp,
+                metadata,
             });
         }
     }

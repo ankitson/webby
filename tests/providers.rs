@@ -189,6 +189,63 @@ fn no_index_bag_writes_card_manifest_without_page() {
 }
 
 #[test]
+fn generated_manifest_uses_app_owned_webby_metadata() {
+    let tmp = TestDir::new("app-metadata");
+    let local = tmp.path().join("local");
+    fs::create_dir_all(&local).unwrap();
+    fs::write(
+        local.join("report.html"),
+        r#"<!doctype html>
+<html>
+<head>
+  <title>Fallback report title</title>
+  <script type="application/webby+json">
+  {
+    "title": "Network Report",
+    "description": "A self-contained report.",
+    "properties": {
+      "category": "Documents",
+      "priority": 3
+    }
+  }
+  </script>
+</head>
+<body>ok</body>
+</html>"#,
+    )
+    .unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args(["deploy", "-b", "local"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
+    assert!(manifest.contains("\"title\": \"Network Report\""));
+    assert!(manifest.contains("\"description\": \"A self-contained report.\""));
+    assert!(manifest.contains("\"category\": \"Documents\""));
+    assert!(manifest.contains("\"properties\": {"));
+    assert!(manifest.contains("\"priority\": 3"));
+}
+
+#[test]
 fn deploy_no_index_flag_skips_root_index_without_config_mode() {
     let tmp = TestDir::new("no-index-flag");
     let caddy = tmp.path().join("caddy");

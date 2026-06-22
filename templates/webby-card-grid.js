@@ -239,24 +239,31 @@ function previewSlug(value) {
     .replace(/^-+|-+$/g, "");
 }
 
-function groupItems(items) {
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function groupItems(items, property) {
   const groups = new Map();
   for (const item of items) {
-    const category = item.category || "Sites";
-    if (!groups.has(category)) groups.set(category, []);
-    groups.get(category).push(item);
+    const group = property ? item.properties[property] : item.category;
+    const name = group === undefined || group === null || group === "" ? "Sites" : String(group);
+    if (!groups.has(name)) groups.set(name, []);
+    groups.get(name).push(item);
   }
   return groups;
 }
 
 function normalizeItem(item) {
   const id = String(item.id || item.title || item.href || "card");
+  const properties = isPlainObject(item.properties) ? { ...item.properties } : {};
   return {
     id,
     title: String(item.title || id),
     href: String(item.href || "#"),
     description: item.description ? String(item.description) : "",
-    category: item.category ? String(item.category) : "",
+    category: item.category ? String(item.category) : (properties.category ? String(properties.category) : ""),
+    properties,
     tmp: Boolean(item.tmp),
     previewUrl: item.previewUrl ? String(item.previewUrl) : "",
   };
@@ -270,6 +277,7 @@ function readPixelValue(style, name, fallback) {
 export class WebbyCardGrid extends HTMLElement {
   static observedAttributes = [
     "group-by-category",
+    "group-by-property",
     "preview-base",
     "show-descriptions",
     "stable-card-width",
@@ -313,6 +321,10 @@ export class WebbyCardGrid extends HTMLElement {
     return this.hasAttribute("group-by-category");
   }
 
+  get groupByProperty() {
+    return this.getAttribute("group-by-property") || "";
+  }
+
   get showDescriptions() {
     return this.hasAttribute("show-descriptions");
   }
@@ -337,11 +349,11 @@ export class WebbyCardGrid extends HTMLElement {
       return;
     }
 
-    if (this.groupByCategory) {
+    if (this.groupByCategory || this.groupByProperty) {
       const sections = document.createElement("div");
       sections.className = "sections";
       sections.setAttribute("part", "sections");
-      for (const [category, items] of groupItems(this._items)) {
+      for (const [category, items] of groupItems(this._items, this.groupByProperty)) {
         sections.append(this.renderSection(category, items, true));
       }
       this._root.append(sections);

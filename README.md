@@ -58,6 +58,36 @@ Every deploy writes `webby-cards.json` next to the generated assets. That JSON
 contains the same card data used by Webby's index component, so another page can
 embed a Webby bag without scraping a directory listing.
 
+## App Metadata
+
+Apps can carry their own card metadata. For a standalone app, put it in the
+`.html` file. For a folder app, put it in `index.html`.
+
+```html
+<script type="application/webby+json">
+{
+  "title": "Network Audit",
+  "description": "Internal network and DNS audit notes.",
+  "properties": {
+    "category": "Documents",
+    "kind": "report"
+  }
+}
+</script>
+```
+
+`title` and `description` customize the generated card. If they are omitted,
+Webby falls back to the page's `<title>` and `<meta name="description">` when
+available.
+
+`properties` is an app-defined key/value object. Webby copies it into
+`webby-cards.json` without assigning meaning to the keys. Host pages can use
+those properties however they want, for example grouping by
+`properties.category`.
+
+For compatibility with older card consumers, a string `properties.category`
+also appears as the generated card's top-level `category` field.
+
 ## Provider Examples
 
 Built-in bags:

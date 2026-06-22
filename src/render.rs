@@ -45,6 +45,7 @@ pub fn web_component_js() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::metadata::AppMetadata;
 
     #[test]
     fn index_uses_preview_tiles_without_old_labels() {
@@ -54,12 +55,14 @@ mod tests {
                 is_dir: true,
                 href: "./alpha/".to_string(),
                 tmp: false,
+                metadata: AppMetadata::default(),
             },
             AppEntry {
                 name: "tmp-beta".to_string(),
                 is_dir: false,
                 href: "./tmp-beta.html".to_string(),
                 tmp: true,
+                metadata: AppMetadata::default(),
             },
         ];
 
@@ -93,6 +96,7 @@ mod tests {
             is_dir: true,
             href: "./alpha/".to_string(),
             tmp: false,
+            metadata: AppMetadata::default(),
         }];
 
         let json = render_card_manifest(&apps);
@@ -108,6 +112,7 @@ mod tests {
         assert!(js.contains("class WebbyCardGrid extends HTMLElement"));
         assert!(js.contains("customElements.define(\"webby-card-grid\""));
         assert!(js.contains("attachShadow({ mode: \"open\" })"));
+        assert!(js.contains("group-by-property"));
         assert!(js.contains("--webby-accent"));
         assert!(js.contains("--webby-card-max-width: 800px"));
         assert!(js.contains("--webby-card-max-height: 800px"));

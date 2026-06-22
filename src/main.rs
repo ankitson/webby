@@ -1,6 +1,7 @@
 mod app;
 mod cards;
 mod config;
+mod metadata;
 mod preview;
 mod providers;
 mod render;

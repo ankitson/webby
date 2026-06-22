@@ -1,3 +1,20 @@
+## 2026-06-22 — App-Owned Card Metadata
+
+Goal: make card metadata first-class without adding a bag-level metadata database or making categories a hard-coded Webby concept.
+
+Decision:
+- Read `<script type="application/webby+json">` from a standalone `.html` app or a folder app's `index.html`.
+- Use `title` and `description` as reserved display fields, and copy arbitrary `properties` into the generated card manifest.
+- Fall back to standard `<title>` and `<meta name="description">` when explicit Webby display fields are absent.
+- Keep `category` as a compatibility mirror of `properties.category`; the durable source of truth is the app-owned `properties` object.
+- Add generic `group-by-property` support to `<webby-card-grid>` so consumers can group by any property key.
+
+Verification:
+- `cargo fmt`
+- `cargo test`
+- Regenerated the internal bag manifest with `cargo run -- deploy -b internal --no-index`.
+- Live manifest and homepage checks showed the document apps grouped from `properties.category`.
+
 ## 2026-06-21 — Public Preview Asset Path
 
 Goal: make generated preview images load on the public Cloudflare Pages bag.

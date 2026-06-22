@@ -1,3 +1,21 @@
+## 2026-06-22
+
+### App-Owned Card Metadata
+
+Added:
+- Embedded app metadata support via `<script type="application/webby+json">` in standalone app HTML files and folder app `index.html` files.
+- Generic `properties` output in generated `webby-cards.json`.
+- Standard HTML metadata fallbacks for card `title` and `description` from `<title>` and `<meta name="description">`.
+- `<webby-card-grid group-by-property="...">` support for consumers that want to group by arbitrary properties.
+
+Modified:
+- Generated cards now mirror string `properties.category` to the legacy top-level `category` field for compatibility.
+- The reusable card component preserves `item.properties` during normalization.
+
+Why:
+- Card metadata should travel with the app artifact instead of living in a bag-level registry or manual generated-manifest edit.
+- Category grouping is now a consumer convention over generic app properties, not a dedicated Webby storage concept.
+
 ## 2026-06-21
 
 ### Public Preview Asset Path
