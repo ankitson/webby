@@ -129,5 +129,6 @@ mod tests {
         assert!(js.contains("--webby-accent"));
         assert!(js.contains("--webby-card-max-width: 800px"));
         assert!(js.contains("--webby-card-max-height: 800px"));
+        assert!(!js.contains("linear-gradient"));
     }
 }

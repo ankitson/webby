@@ -71,8 +71,6 @@ TEMPLATE.innerHTML = `
     }
 
     .site {
-      --tile-hue: 18;
-      --tile-shift: 90;
       width: 100%;
       min-width: 0;
       max-width: min(100%, var(--webby-card-max-width));
@@ -108,9 +106,7 @@ TEMPLATE.innerHTML = `
       inset: 0;
       z-index: 0;
       overflow: hidden;
-      background-image:
-        var(--preview-image, none),
-        linear-gradient(135deg, hsl(var(--tile-hue) 58% 38%) 0%, hsl(var(--tile-shift) 40% 28%) 48%, hsl(var(--tile-hue) 42% 18%) 100%);
+      background-image: var(--preview-image, none);
       background-position: center top;
       background-size: cover;
       filter: var(--webby-preview-filter);
