@@ -317,6 +317,21 @@ Next steps:
 - Decide on release packaging and whether to publish binaries in addition to `cargo install`.
 - Revisit Cloudflare domain attachment once the preferred Wrangler/API path is confirmed for OSS users.
 
+## 2026-06-22 — Firefox Tab-Switch Flash
+
+Goal: keep the public webby index from showing Firefox's blue/grey default canvas when reached from the blog header tab.
+
+Decision:
+- Emit a tiny critical dark/light background block immediately after charset/viewport in the generated index head.
+- Inline configured index chrome before module and image preloads so host theme bootstrapping can run before heavier discovery work.
+- Regenerate the public bag index locally through `webby serve` before deploy verification.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`
+- Local Firefox screenshot of the generated public index sampled `#121311` across the viewport.
+- Local browser automation confirmed the projects-to-writing pointer-down cover uses `rgb(18, 19, 17)`.
+
 ## 2026-06-23 — Optimized Preview Images
 
 Goal: make the blog's WebP preview optimization the default behavior of generated Webby previews.
@@ -328,3 +343,4 @@ Decision:
 
 Verification:
 - `cargo fmt --check`
+- `cargo test`

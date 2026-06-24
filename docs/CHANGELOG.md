@@ -208,6 +208,16 @@ Modified:
 Why:
 - A Firefox profile showed hover jank dominated by `Coalesced input move flusher` stalls and many CSS transition markers, including non-compositor border-color transitions on large cards.
 
+### Firefox Tab-Switch Flash
+
+Modified:
+- Added a top-of-head critical background/color-scheme block to generated webby indexes.
+- Moved configured index chrome before module/image preloads so host theme scripts can set `html[data-theme]` earlier.
+- Regenerated the public bag index with the updated head order.
+
+Why:
+- Firefox could expose its blue/grey default canvas while crossing from the blog origin to the projects origin before the generated index CSS applied.
+
 ### Lightweight Preview Tiles
 
 Modified:

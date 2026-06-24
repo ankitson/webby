@@ -1,7 +1,9 @@
 use minijinja::{Environment, context};
 
 use crate::app::AppEntry;
-use crate::cards::from_app_entry;
+use crate::cards::{CardItem, from_app_entry};
+
+const PREVIEW_PRELOAD_LIMIT: usize = 6;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct IndexChromeContent {
@@ -21,14 +23,44 @@ fn make_env() -> Environment<'static> {
 pub fn render_index(apps: &[AppEntry], title: &str, chrome: &IndexChromeContent) -> String {
     let items = apps.iter().map(from_app_entry).collect::<Vec<_>>();
     let items_json = serde_json::to_string(&items).expect("serialize card items");
+    let component_src = "./webby-card-grid.js";
+    let preview_preloads = render_preview_preloads(&items);
 
     make_env()
         .get_template("index.html")
         .expect("index.html template")
-        .render(
-            context! { title, items_json, chrome_head => chrome.head, chrome_body => chrome.body },
-        )
+        .render(context! {
+            title,
+            items_json,
+            component_src,
+            preview_preloads,
+            chrome_head => chrome.head,
+            chrome_body => chrome.body,
+        })
         .expect("render index.html")
+}
+
+fn render_preview_preloads(items: &[CardItem]) -> String {
+    items
+        .iter()
+        .filter_map(|item| item.preview_url.as_deref())
+        .take(PREVIEW_PRELOAD_LIMIT)
+        .map(|href| {
+            format!(
+                "  <link rel=\"preload\" as=\"image\" href=\"{}\" fetchpriority=\"high\">",
+                escape_html_attr(href)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn escape_html_attr(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('"', "&quot;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 pub fn render_card_manifest(apps: &[AppEntry]) -> String {
@@ -77,6 +109,10 @@ mod tests {
         assert!(html.contains("\"id\":\"tmp-beta\""));
         assert!(html.contains("\"title\":\"beta\""));
         assert!(html.contains("\"tmp\":true"));
+        assert!(html.contains("<link rel=\"modulepreload\" href=\"./webby-card-grid.js\">"));
+        assert!(html.contains(
+            "<link rel=\"preload\" as=\"image\" href=\"./webby-previews/alpha.webp\" fetchpriority=\"high\">"
+        ));
         assert!(html.contains("import \"./webby-card-grid.js\";"));
         assert!(!html.contains("<iframe"));
         assert!(!html.contains("Index"));
