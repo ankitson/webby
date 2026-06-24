@@ -22,8 +22,7 @@ fn make_env() -> Environment<'static> {
 
 pub fn render_index(apps: &[AppEntry], title: &str, chrome: &IndexChromeContent) -> String {
     let items = apps.iter().map(from_app_entry).collect::<Vec<_>>();
-    let items_json = serde_json::to_string(&items).expect("serialize card items");
-    let component_src = "./webby-card-grid.js";
+    let cards_html = render_static_cards(&items);
     let preview_preloads = render_preview_preloads(&items);
 
     make_env()
@@ -31,13 +30,62 @@ pub fn render_index(apps: &[AppEntry], title: &str, chrome: &IndexChromeContent)
         .expect("index.html template")
         .render(context! {
             title,
-            items_json,
-            component_src,
+            cards_html,
             preview_preloads,
             chrome_head => chrome.head,
             chrome_body => chrome.body,
         })
         .expect("render index.html")
+}
+
+fn render_static_cards(items: &[CardItem]) -> String {
+    if items.is_empty() {
+        return "  <p class=\"empty\">Nothing here yet.</p>".to_string();
+    }
+
+    let mut html = String::from("  <div class=\"webby-grid\" aria-label=\"Sites\">\n");
+    for (index, item) in items.iter().enumerate() {
+        html.push_str(&render_static_card(item, index));
+    }
+    html.push_str("  </div>");
+    html
+}
+
+fn render_static_card(item: &CardItem, index: usize) -> String {
+    let title_text = escape_html_text(&item.title);
+    let title_attr = escape_html_attr(&item.title);
+    let href = escape_html_attr(&item.href);
+    let loading = if index < PREVIEW_PRELOAD_LIMIT {
+        "eager"
+    } else {
+        "lazy"
+    };
+    let fetch_priority = if index < PREVIEW_PRELOAD_LIMIT {
+        "high"
+    } else {
+        "low"
+    };
+    let preview = item
+        .preview_url
+        .as_deref()
+        .map(|url| {
+            format!(
+                "      <img class=\"webby-preview-image\" src=\"{}\" alt=\"\" width=\"960\" height=\"600\" loading=\"{}\" decoding=\"async\" fetchpriority=\"{}\">\n",
+                escape_html_attr(url),
+                loading,
+                fetch_priority
+            )
+        })
+        .unwrap_or_default();
+    let temp_label = if item.tmp {
+        "      <span class=\"webby-temp-label\">temp</span>\n"
+    } else {
+        ""
+    };
+
+    format!(
+        "    <article class=\"webby-site\">\n      <a class=\"webby-preview-link\" href=\"{href}\" aria-label=\"Open {title_attr}\">\n{preview}      </a>\n      <div class=\"webby-site-caption\">\n        <a class=\"webby-site-title\" href=\"{href}\">{title_text}</a>\n{temp_label}      </div>\n    </article>\n"
+    )
 }
 
 fn render_preview_preloads(items: &[CardItem]) -> String {
@@ -59,6 +107,13 @@ fn escape_html_attr(value: &str) -> String {
     value
         .replace('&', "&amp;")
         .replace('"', "&quot;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+fn escape_html_text(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
 }
@@ -99,21 +154,21 @@ mod tests {
         let html = render_index(&apps, "webby", &IndexChromeContent::default());
 
         assert!(html.contains("<h1 class=\"sr-only\">webby</h1>"));
-        assert!(html.contains("<webby-card-grid id=\"webby-grid\""));
-        assert!(html.contains("type=\"application/json\" id=\"webby-card-data\""));
-        assert!(html.contains("grid.setAttribute(\"data-theme\", theme);"));
-        assert!(html.contains("\"id\":\"alpha\""));
-        assert!(html.contains("\"title\":\"alpha\""));
-        assert!(html.contains("\"href\":\"./alpha/\""));
-        assert!(html.contains("\"previewUrl\":\"./webby-previews/alpha.webp\""));
-        assert!(html.contains("\"id\":\"tmp-beta\""));
-        assert!(html.contains("\"title\":\"beta\""));
-        assert!(html.contains("\"tmp\":true"));
-        assert!(html.contains("<link rel=\"modulepreload\" href=\"./webby-card-grid.js\">"));
+        assert!(html.contains("<div class=\"webby-grid\" aria-label=\"Sites\">"));
+        assert!(html.contains("<article class=\"webby-site\">"));
+        assert!(html.contains(
+            "<a class=\"webby-preview-link\" href=\"./alpha/\" aria-label=\"Open alpha\">"
+        ));
+        assert!(html.contains("<img class=\"webby-preview-image\" src=\"./webby-previews/alpha.webp\" alt=\"\" width=\"960\" height=\"600\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\">"));
+        assert!(html.contains("<span class=\"webby-temp-label\">temp</span>"));
         assert!(html.contains(
             "<link rel=\"preload\" as=\"image\" href=\"./webby-previews/alpha.webp\" fetchpriority=\"high\">"
         ));
-        assert!(html.contains("import \"./webby-card-grid.js\";"));
+        assert!(!html.contains("<webby-card-grid"));
+        assert!(!html.contains("id=\"webby-card-data\""));
+        assert!(!html.contains("<script type=\"module\">"));
+        assert!(!html.contains("modulepreload"));
+        assert!(!html.contains("import \"./webby-card-grid.js\";"));
         assert!(!html.contains("<iframe"));
         assert!(!html.contains("Index"));
         assert!(!html.contains("entries"));
@@ -121,6 +176,35 @@ mod tests {
         assert!(!html.contains("site-header"));
         assert!(!html.contains(">tool<"));
         assert!(!html.contains(">page<"));
+    }
+
+    #[test]
+    fn index_escapes_static_card_markup() {
+        let apps = vec![AppEntry {
+            name: "alpha".to_string(),
+            is_dir: true,
+            href: "./alpha/".to_string(),
+            tmp: false,
+            metadata: AppMetadata {
+                title: Some("A & <B> \"Q\"".to_string()),
+                ..AppMetadata::default()
+            },
+        }];
+
+        let html = render_index(&apps, "webby", &IndexChromeContent::default());
+
+        assert!(html.contains("aria-label=\"Open A &amp; &lt;B&gt; &quot;Q&quot;\""));
+        assert!(html.contains(">A &amp; &lt;B&gt; \"Q\"</a>"));
+        assert!(!html.contains(">A & <B>"));
+    }
+
+    #[test]
+    fn index_renders_empty_state_without_js() {
+        let html = render_index(&[], "webby", &IndexChromeContent::default());
+
+        assert!(html.contains("<p class=\"empty\">Nothing here yet.</p>"));
+        assert!(!html.contains("<webby-card-grid"));
+        assert!(!html.contains("<script type=\"module\">"));
     }
 
     #[test]

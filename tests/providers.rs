@@ -130,6 +130,16 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     );
     assert!(local.join("index.html").exists());
     assert!(String::from_utf8_lossy(&local_out.stdout).contains("http://localhost:7777"));
+    let local_index = fs::read_to_string(local.join("index.html")).unwrap();
+    assert!(local_index.contains("<div class=\"webby-grid\" aria-label=\"Sites\">"));
+    assert!(
+        local_index.contains(
+            "<img class=\"webby-preview-image\" src=\"./webby-previews/app.webp\" alt=\"\""
+        )
+    );
+    assert!(local_index.contains("width=\"960\" height=\"600\""));
+    assert!(!local_index.contains("<webby-card-grid"));
+    assert!(!local_index.contains("<script type=\"module\">"));
     let local_manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
     assert!(!local_manifest.contains("\"id\": \"webby-previews\""));
 

@@ -218,14 +218,6 @@ TEMPLATE.innerHTML = `
   <div class="root" part="root"></div>
 `;
 
-function hueFor(value) {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = ((hash * 31) + value.charCodeAt(i)) >>> 0;
-  }
-  return hash % 360;
-}
-
 function previewSlug(value) {
   return String(value || "")
     .toLowerCase()
@@ -456,14 +448,11 @@ export class WebbyCardGrid extends HTMLElement {
   }
 
   renderCard(item) {
-    const hue = hueFor(item.id);
     const previewUrl = item.previewUrl || `${this.previewBase}${previewSlug(item.id)}.webp`;
 
     const card = document.createElement("article");
     card.className = "site";
     card.setAttribute("part", "card");
-    card.style.setProperty("--tile-hue", String(hue));
-    card.style.setProperty("--tile-shift", String((hue + 72) % 360));
     card.style.setProperty("--preview-image", `url("${previewUrl}")`);
 
     const previewLink = document.createElement("a");

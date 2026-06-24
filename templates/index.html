@@ -28,7 +28,6 @@
   </style>
   {{ chrome_head | safe }}
   <title>{{ title }}</title>
-  <link rel="modulepreload" href="{{ component_src | safe }}">
 {{ preview_preloads | safe }}
   <style>
 {% include "style.css" %}
@@ -38,31 +37,7 @@
 {{ chrome_body | safe }}
 <main>
   <h1 class="sr-only">{{ title }}</h1>
-  <webby-card-grid id="webby-grid" aria-label="Sites"></webby-card-grid>
-  <script type="application/json" id="webby-card-data">{{ items_json | safe }}</script>
-  <script type="module">
-    import "{{ component_src | safe }}";
-
-    const data = document.getElementById("webby-card-data");
-    const grid = document.getElementById("webby-grid");
-
-    grid.items = JSON.parse(data.textContent || "[]");
-
-    const syncTheme = () => {
-      const theme = document.documentElement.getAttribute("data-theme");
-      if (theme) {
-        grid.setAttribute("data-theme", theme);
-      } else {
-        grid.removeAttribute("data-theme");
-      }
-    };
-
-    syncTheme();
-    new MutationObserver(syncTheme).observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-  </script>
+{{ cards_html | safe }}
 </main>
 </body>
 </html>

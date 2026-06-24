@@ -344,3 +344,18 @@ Decision:
 Verification:
 - `cargo fmt --check`
 - `cargo test`
+
+## 2026-06-24 — Static First Generated Indexes
+
+Goal: make generated Webby index pages feel fast by rendering the primary card grid before JavaScript runs.
+
+Decision:
+- Render static `.webby-grid` card markup directly into generated `index.html`.
+- Use real preview `<img>` elements with fixed `width`/`height`, `decoding`, `loading`, and `fetchpriority` attributes so the browser can discover images early and reserve layout space.
+- Stop importing `webby-card-grid.js` in the default index; continue writing the component asset for external reusable embeds.
+- Keep preview placeholders as plain tile backgrounds with no gradient fallback or animated layout transition.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`
+- Browser smoke test against a locally served generated public-style index.

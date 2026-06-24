@@ -61,6 +61,12 @@ Every deploy writes `webby-cards.json` next to the generated assets. That JSON
 contains the same card data used by Webby's index component, so another page can
 embed a Webby bag without scraping a directory listing.
 
+Generated bag indexes render their card grid as static HTML. The browser can
+lay out cards and discover preview image URLs during the initial document parse;
+`webby-card-grid.js` is still emitted for pages that want to embed a reusable
+custom element, but the default index does not need that JavaScript to show its
+primary content.
+
 ## App Metadata
 
 Apps can carry their own card metadata. For a standalone app, put it in the
@@ -219,7 +225,7 @@ checkout, a local `.env.secret` file is loaded if present.
 `local` generates an index and can be served with `webby serve`.
 
 Webby always writes `webby-cards.json` and `webby-card-grid.js`. By default it
-also writes a standalone `index.html` for the bag root.
+also writes a standalone static `index.html` for the bag root.
 
 Set `noIndex: true` on a bag, or pass `--no-index` to `add`, `pub`, `deploy`,
 or `serve`, when a larger site consumes the card data and the bag should not

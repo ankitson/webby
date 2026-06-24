@@ -340,3 +340,16 @@ Modified:
 
 Why:
 - The blog had a separate post-processing step for smaller WebP preview assets; Webby should generate those optimized card images directly.
+
+## 2026-06-24
+
+### Static First Generated Indexes
+
+Modified:
+- Generated bag indexes now emit static card/link/image markup directly in `index.html`.
+- Removed the default index dependency on `<webby-card-grid>` upgrade, embedded card JSON, and module import before cards appear.
+- Added image dimensions, decoding/loading/fetch-priority attributes, and integration coverage for static card markup.
+- Kept `webby-card-grid.js` as a reusable embed asset while trimming unused gradient color hashing from the component.
+
+Why:
+- The primary cards should be discoverable and laid out during the initial HTML parse so generated pages feel snappy and avoid JS-driven layout swaps.

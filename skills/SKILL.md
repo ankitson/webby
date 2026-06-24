@@ -105,4 +105,5 @@ stages the result like any other folder app.
 - Rust CLI; use `cargo install --path .` locally.
 - `-b` / `--bag` is the only bag selector. There is no `--public` flag.
 - `webby preview` captures static optimized WebP card previews into `webby-previews/` via `uvx shot-scraper` and Pillow through `uvx`; pass an app name to refresh a single preview.
+- Generated bag indexes render static card HTML; `webby-card-grid.js` is emitted for reusable embeds, not required for the default index to show cards.
 - `command` providers can use `{dir}`, `{label}`, and `{url}` template values.
