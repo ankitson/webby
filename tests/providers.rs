@@ -100,11 +100,9 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     let local = tmp.path().join("local");
     let caddy = tmp.path().join("caddy");
     write_named_app(&local, "app");
-    write_named_app(&local, "legacy");
     write_named_app(&local, "other");
     fs::create_dir_all(local.join("webby-previews")).unwrap();
     fs::write(local.join("webby-previews").join("app.webp"), "webp").unwrap();
-    fs::write(local.join("webby-previews").join("legacy.jpg"), "jpeg").unwrap();
     write_app(&caddy);
     let config = write_config(
         tmp.path(),
@@ -140,17 +138,16 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
         )
     );
     assert!(local_index.contains(
-        "<img class=\"webby-preview-image\" src=\"./webby-previews/legacy.jpg\" alt=\"\""
+        "<img class=\"webby-preview-image\" src=\"./webby-previews/other.webp\" alt=\"\""
     ));
-    assert!(!local_index.contains("webby-previews/other.webp"));
     assert!(local_index.contains("width=\"960\" height=\"600\""));
     assert!(!local_index.contains("<webby-card-grid"));
     assert!(!local_index.contains("<script type=\"module\">"));
     let local_manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
     assert!(!local_manifest.contains("\"id\": \"webby-previews\""));
     assert!(local_manifest.contains("\"previewUrl\": \"./webby-previews/app.webp\""));
-    assert!(local_manifest.contains("\"previewUrl\": \"./webby-previews/legacy.jpg\""));
-    assert!(local_manifest.contains("\"previewUrl\": null"));
+    assert!(local_manifest.contains("\"previewUrl\": \"./webby-previews/other.webp\""));
+    assert!(!local_manifest.contains("\"previewUrl\": null"));
 
     let caddy_out = webby(tmp.path(), &config)
         .args(["deploy", "-b", "caddy"])
@@ -713,6 +710,105 @@ exit 0
     assert!(log.contains("--width 640 --height 360"));
     assert!(log.contains("--wait 2000"));
     assert!(log.contains("--timeout 2000"));
+}
+
+#[test]
+fn preview_url_writes_optimized_webp() {
+    let tmp = TestDir::new("preview-url");
+    let bin_dir = tmp.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let capture = tmp.path().join("commands.log");
+    fake_exe(
+        &bin_dir,
+        "uvx",
+        r#"#!/bin/sh
+if [ "$1" = "shot-scraper" ]; then
+  out=""
+  prev=""
+  for arg in "$@"; do
+    if [ "$prev" = "--output" ]; then out="$arg"; fi
+    prev="$arg"
+  done
+  if [ -z "$out" ]; then exit 2; fi
+  echo "uvx shot-scraper $*" >> "$WEBBY_CAPTURE"
+  printf "jpeg" > "$out"
+  exit 0
+fi
+
+source=""
+out=""
+width=""
+quality=""
+after_c=0
+for arg in "$@"; do
+  if [ "$after_c" = "1" ]; then
+    after_c=2
+  elif [ "$after_c" = "2" ]; then
+    source="$arg"
+    after_c=3
+  elif [ "$after_c" = "3" ]; then
+    out="$arg"
+    after_c=4
+  elif [ "$after_c" = "4" ]; then
+    width="$arg"
+    after_c=5
+  elif [ "$after_c" = "5" ]; then
+    quality="$arg"
+    after_c=6
+  elif [ "$arg" = "-c" ]; then
+    after_c=1
+  fi
+done
+if [ -z "$source" ] || [ -z "$out" ] || [ ! -f "$source" ]; then exit 2; fi
+echo "uvx pillow width=$width quality=$quality output=$out" >> "$WEBBY_CAPTURE"
+printf "webp" > "$out"
+exit 0
+"#,
+    );
+
+    let config = write_config(
+        tmp.path(),
+        r#"{
+          "defaultBag": "local",
+          "bags": {
+            "local": { "dir": "/tmp/unused", "host": { "type": "local", "port": 7777 } }
+          }
+        }"#,
+    );
+    let output = tmp.path().join("service.webp");
+
+    let out = webby(tmp.path(), &config)
+        .env("PATH", bin_dir)
+        .env("WEBBY_CAPTURE", &capture)
+        .args([
+            "preview-url",
+            "https://service.example.test",
+            output.to_str().unwrap(),
+            "--force",
+            "--width",
+            "640",
+            "--height",
+            "360",
+            "--timeout-secs",
+            "2",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(output.exists());
+    assert!(!output.with_extension("capture.jpg").exists());
+
+    let log = fs::read_to_string(capture).unwrap();
+    assert!(log.contains("https://service.example.test"));
+    assert!(log.contains("uvx pillow width=960 quality=78"));
+    assert!(log.contains("--width 640 --height 360"));
+    assert!(log.contains("--timeout 2000"));
+    assert_eq!(log.lines().count(), 2);
 }
 
 #[test]

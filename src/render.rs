@@ -1,10 +1,7 @@
 use minijinja::{Environment, context};
-use std::path::Path;
 
 use crate::app::AppEntry;
-#[cfg(test)]
-use crate::cards::from_app_entry;
-use crate::cards::{CardItem, existing_preview_url, from_app_entry_with_preview};
+use crate::cards::{CardItem, from_app_entry};
 
 const PREVIEW_PRELOAD_LIMIT: usize = 6;
 
@@ -23,19 +20,8 @@ fn make_env() -> Environment<'static> {
     env
 }
 
-#[cfg(test)]
 pub fn render_index(apps: &[AppEntry], title: &str, chrome: &IndexChromeContent) -> String {
     let items = apps.iter().map(from_app_entry).collect::<Vec<_>>();
-    render_index_from_items(&items, title, chrome)
-}
-
-pub fn render_index_for_bag(
-    apps: &[AppEntry],
-    title: &str,
-    chrome: &IndexChromeContent,
-    bag_dir: &Path,
-) -> String {
-    let items = card_items_for_bag(apps, bag_dir);
     render_index_from_items(&items, title, chrome)
 }
 
@@ -54,12 +40,6 @@ fn render_index_from_items(items: &[CardItem], title: &str, chrome: &IndexChrome
             chrome_body => chrome.body,
         })
         .expect("render index.html")
-}
-
-fn card_items_for_bag(apps: &[AppEntry], bag_dir: &Path) -> Vec<CardItem> {
-    apps.iter()
-        .map(|app| from_app_entry_with_preview(app, existing_preview_url(bag_dir, &app.name)))
-        .collect()
 }
 
 fn render_static_cards(items: &[CardItem]) -> String {
@@ -142,14 +122,8 @@ fn escape_html_text(value: &str) -> String {
         .replace('>', "&gt;")
 }
 
-#[cfg(test)]
 pub fn render_card_manifest(apps: &[AppEntry]) -> String {
     let items = apps.iter().map(from_app_entry).collect::<Vec<_>>();
-    serde_json::to_string_pretty(&items).expect("serialize card items")
-}
-
-pub fn render_card_manifest_for_bag(apps: &[AppEntry], bag_dir: &Path) -> String {
-    let items = card_items_for_bag(apps, bag_dir);
     serde_json::to_string_pretty(&items).expect("serialize card items")
 }
 

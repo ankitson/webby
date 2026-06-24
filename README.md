@@ -57,6 +57,10 @@ generated indexes fast by serving images instead of live iframes. Pass an app
 name, for example `webby preview jobsearch-docs -b internal --force`, to
 refresh one preview.
 
+`webby preview-url URL output.webp` uses the same capture and WebP optimization
+pipeline for pages that are not staged in a Webby bag, such as a host homepage
+that wants service-card previews.
+
 Every deploy writes `webby-cards.json` next to the generated assets. That JSON
 contains the same card data used by Webby's index component, so another page can
 embed a Webby bag without scraping a directory listing.

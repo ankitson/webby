@@ -363,3 +363,15 @@ Modified:
 
 Why:
 - Existing internal bags may still have legacy JPEG previews; deploy should not break those images just because new previews are generated as optimized WebP by default.
+
+### Canonical WebP Previews
+
+Added:
+- `webby preview-url URL output.webp` for capturing optimized WebP previews for pages outside a Webby bag.
+
+Modified:
+- Generated card manifests, static indexes, and the reusable card-grid fallback now consistently point at `.webp` preview URLs.
+- Removed bag-time JPEG/PNG preview fallback behavior from generated card data.
+
+Why:
+- Preview generation and preview references should converge on one canonical optimized WebP asset format instead of carrying compatibility paths for older JPEG captures.

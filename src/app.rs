@@ -135,7 +135,7 @@ pub fn generate_index(bag: &Bag) -> Result<Vec<AppEntry>> {
     let apps = list_apps(bag)?;
     fs::write(
         bag.dir.join("webby-cards.json"),
-        crate::render::render_card_manifest_for_bag(&apps, &bag.dir),
+        crate::render::render_card_manifest(&apps),
     )?;
     fs::write(
         bag.dir.join("webby-card-grid.js"),
@@ -147,7 +147,7 @@ pub fn generate_index(bag: &Bag) -> Result<Vec<AppEntry>> {
         let chrome = read_index_chrome(bag.index_chrome.as_ref())?;
         fs::write(
             bag.dir.join("index.html"),
-            crate::render::render_index_for_bag(&apps, "webby", &chrome, &bag.dir),
+            crate::render::render_index(&apps, "webby", &chrome),
         )?;
     }
     Ok(apps)

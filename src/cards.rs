@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::path::Path;
 
 use serde::Serialize;
 use serde_json::Value;
@@ -21,12 +20,7 @@ pub struct CardItem {
     pub icon: Option<String>,
 }
 
-#[cfg(test)]
 pub fn from_app_entry(app: &AppEntry) -> CardItem {
-    from_app_entry_with_preview(app, default_preview_url(&app.name))
-}
-
-pub fn from_app_entry_with_preview(app: &AppEntry, preview_url: Option<String>) -> CardItem {
     CardItem {
         id: app.name.clone(),
         title: display_title(app),
@@ -35,32 +29,18 @@ pub fn from_app_entry_with_preview(app: &AppEntry, preview_url: Option<String>) 
         category: property_string(&app.metadata.properties, "category"),
         properties: app.metadata.properties.clone(),
         tmp: app.tmp,
-        preview_url,
+        preview_url: Some(preview_url(&app.name)),
         icon: None,
     }
 }
 
-pub fn existing_preview_url(bag_dir: &Path, app_name: &str) -> Option<String> {
-    let slug = preview_slug(app_name);
-    [PREVIEW_EXT, "jpg", "jpeg", "png"]
-        .into_iter()
-        .find(|extension| {
-            bag_dir
-                .join(PREVIEW_DIR)
-                .join(format!("{slug}.{extension}"))
-                .exists()
-        })
-        .map(|extension| format!("./{PREVIEW_DIR}/{slug}.{extension}"))
-}
-
-#[cfg(test)]
-fn default_preview_url(app_name: &str) -> Option<String> {
-    Some(format!(
+fn preview_url(app_name: &str) -> String {
+    format!(
         "./{}/{}.{}",
         PREVIEW_DIR,
         preview_slug(app_name),
         PREVIEW_EXT
-    ))
+    )
 }
 
 fn display_title(app: &AppEntry) -> String {

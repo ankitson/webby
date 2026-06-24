@@ -251,7 +251,7 @@ function normalizeItem(item) {
     category: item.category ? String(item.category) : (properties.category ? String(properties.category) : ""),
     properties,
     tmp: Boolean(item.tmp),
-    previewUrl: item.previewUrl === null ? null : (item.previewUrl ? String(item.previewUrl) : ""),
+    previewUrl: item.previewUrl ? String(item.previewUrl) : "",
   };
 }
 
@@ -448,14 +448,12 @@ export class WebbyCardGrid extends HTMLElement {
   }
 
   renderCard(item) {
-    const previewUrl = item.previewUrl === null
-      ? ""
-      : (item.previewUrl || `${this.previewBase}${previewSlug(item.id)}.webp`);
+    const previewUrl = item.previewUrl || `${this.previewBase}${previewSlug(item.id)}.webp`;
 
     const card = document.createElement("article");
     card.className = "site";
     card.setAttribute("part", "card");
-    if (previewUrl) card.style.setProperty("--preview-image", `url("${previewUrl}")`);
+    card.style.setProperty("--preview-image", `url("${previewUrl}")`);
 
     const previewLink = document.createElement("a");
     previewLink.className = "preview-link";

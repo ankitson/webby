@@ -372,3 +372,16 @@ Decision:
 Verification:
 - `cargo fmt --check`
 - `cargo test`
+
+## 2026-06-24 — Canonical WebP Previews
+
+Goal: remove the preview fallback detour and make generated Webby data consistently reference optimized WebP previews.
+
+Decision:
+- Generated manifests and static indexes always point at `webby-previews/<slug>.webp`.
+- `webby-card-grid` falls back to `.webp` URLs when embed data omits `previewUrl`.
+- Added `webby preview-url URL output.webp` so host pages can reuse Webby's capture and WebP optimization pipeline for non-bag cards.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`

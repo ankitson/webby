@@ -17,7 +17,7 @@ use crate::app::{app_url, generate_index, list_apps, remove_app, stage_app};
 use crate::config::{Config, Host, sample_config};
 use crate::docs::{DocsOptions, build_docs_app};
 use crate::metadata::{MetadataOverrides, apply_app_metadata_overrides};
-use crate::preview::capture_previews;
+use crate::preview::{capture_preview_url, capture_previews};
 use crate::providers::{after_add, attach_domain, base_url, deploy_bag, open_app};
 
 pub type Result<T> = std::result::Result<T, WebbyError>;
@@ -189,6 +189,19 @@ enum Command {
         #[arg(long, default_value_t = 8)]
         timeout_secs: u64,
     },
+    /// Capture one URL or file path as an optimized WebP preview.
+    PreviewUrl {
+        url: String,
+        output: PathBuf,
+        #[arg(long)]
+        force: bool,
+        #[arg(long, default_value_t = 1200)]
+        width: u32,
+        #[arg(long, default_value_t = 750)]
+        height: u32,
+        #[arg(long, default_value_t = 8)]
+        timeout_secs: u64,
+    },
 }
 
 fn main() {
@@ -309,6 +322,21 @@ fn run() -> Result<()> {
                 app.as_deref(),
             )
         }
+        Command::PreviewUrl {
+            url,
+            output,
+            force,
+            width,
+            height,
+            timeout_secs,
+        } => capture_preview_url(
+            &url,
+            &output,
+            force,
+            width,
+            height,
+            std::time::Duration::from_secs(timeout_secs),
+        ),
     }
 }
 

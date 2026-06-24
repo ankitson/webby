@@ -71,7 +71,14 @@ pub fn capture_previews(
         let capture_out = out.with_extension("capture.jpg");
         print!("capture {} ... ", app.name);
         let _ = std::io::stdout().flush();
-        match capture_optimized_preview(&path, &capture_out, &out, width, height, timeout) {
+        match capture_optimized_preview(
+            &path_to_arg(&path),
+            &capture_out,
+            &out,
+            width,
+            height,
+            timeout,
+        ) {
             Ok(()) => {
                 captured += 1;
                 remove_legacy_preview_jpegs(&out);
@@ -95,20 +102,52 @@ pub fn capture_previews(
     Ok(())
 }
 
+pub fn capture_preview_url(
+    source: &str,
+    out: &Path,
+    force: bool,
+    width: u32,
+    height: u32,
+    timeout: Duration,
+) -> Result<()> {
+    if out.extension().and_then(|ext| ext.to_str()) != Some(PREVIEW_EXT) {
+        return Err(err(format!(
+            "preview output must end in .{}: {}",
+            PREVIEW_EXT,
+            out.display()
+        )));
+    }
+    if out.exists() && !force {
+        println!("skip {} ({})", source, out.display());
+        return Ok(());
+    }
+    if let Some(parent) = out.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let capture_out = out.with_extension("capture.jpg");
+    print!("capture {} ... ", source);
+    let _ = std::io::stdout().flush();
+    capture_optimized_preview(source, &capture_out, out, width, height, timeout)?;
+    remove_legacy_preview_jpegs(out);
+    println!("{}", out.display());
+    Ok(())
+}
+
 fn remove_legacy_preview_jpegs(out: &Path) {
     let _ = fs::remove_file(out.with_extension("jpg"));
     let _ = fs::remove_file(out.with_extension("jpeg"));
 }
 
 fn capture_optimized_preview(
-    path: &Path,
+    source: &str,
     capture_out: &Path,
     out: &Path,
     width: u32,
     height: u32,
     timeout: Duration,
 ) -> Result<()> {
-    capture_with_shot_scraper(path, capture_out, width, height, timeout)?;
+    capture_with_shot_scraper(source, capture_out, width, height, timeout)?;
     let result = optimize_preview(capture_out, out);
     let _ = fs::remove_file(capture_out);
     result
@@ -141,13 +180,12 @@ pub fn preview_slug(value: &str) -> String {
 }
 
 fn capture_with_shot_scraper(
-    path: &Path,
+    input: &str,
     out: &Path,
     width: u32,
     height: u32,
     timeout: Duration,
 ) -> Result<()> {
-    let input = path_to_arg(path);
     let output = path_to_arg(out);
     let width = width.to_string();
     let height = height.to_string();
@@ -157,7 +195,7 @@ fn capture_with_shot_scraper(
         .args([
             "shot-scraper",
             "shot",
-            &input,
+            input,
             "--output",
             &output,
             "--width",
