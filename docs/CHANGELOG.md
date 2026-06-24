@@ -1,3 +1,16 @@
+## 2026-06-24
+
+### Release Prep
+
+Added:
+- `TODO.md` entry to replace auto-generated GitHub release notes with a changelog-driven release body plus verification proof.
+
+Modified:
+- Bumped `webby-deploy` from `0.3.0` to `0.4.0` for the next tag-driven release.
+
+Why:
+- The `v0.4.0` release should carry accurate crate metadata, and release-note generation should become explicit instead of relying on GitHub's generated notes.
+
 ## 2026-06-22
 
 ### Markdown Docs App Generation

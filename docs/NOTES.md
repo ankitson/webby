@@ -1,3 +1,17 @@
+## 2026-06-24 — 0.4.0 Release Prep
+
+Goal: tag and release Webby 0.4.0 while preserving the lesson from the release-notes investigation.
+
+Decision:
+- Add a `TODO.md` item for replacing GitHub auto-generated release notes with a repo-owned changelog extraction and verification workflow.
+- Bump the crate and lockfile version to `0.4.0` before tagging so release artifacts and binary metadata match.
+- Use the existing Justfile flow: `just check`, `just install`, and `just release 0.4.0`.
+
+Verification:
+- `just check`
+- `just install`
+- `webby --version` reported `webby 0.4.0`.
+
 ## 2026-06-22 — Markdown Docs App Generation
 
 Goal: let Webby publish a directory of Markdown files as a normal static app, similar in convenience to `docme`, while keeping the generated output self-contained and provider-agnostic.
