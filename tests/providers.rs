@@ -100,9 +100,11 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     let local = tmp.path().join("local");
     let caddy = tmp.path().join("caddy");
     write_named_app(&local, "app");
+    write_named_app(&local, "legacy");
     write_named_app(&local, "other");
     fs::create_dir_all(local.join("webby-previews")).unwrap();
     fs::write(local.join("webby-previews").join("app.webp"), "webp").unwrap();
+    fs::write(local.join("webby-previews").join("legacy.jpg"), "jpeg").unwrap();
     write_app(&caddy);
     let config = write_config(
         tmp.path(),
@@ -137,11 +139,18 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
             "<img class=\"webby-preview-image\" src=\"./webby-previews/app.webp\" alt=\"\""
         )
     );
+    assert!(local_index.contains(
+        "<img class=\"webby-preview-image\" src=\"./webby-previews/legacy.jpg\" alt=\"\""
+    ));
+    assert!(!local_index.contains("webby-previews/other.webp"));
     assert!(local_index.contains("width=\"960\" height=\"600\""));
     assert!(!local_index.contains("<webby-card-grid"));
     assert!(!local_index.contains("<script type=\"module\">"));
     let local_manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
     assert!(!local_manifest.contains("\"id\": \"webby-previews\""));
+    assert!(local_manifest.contains("\"previewUrl\": \"./webby-previews/app.webp\""));
+    assert!(local_manifest.contains("\"previewUrl\": \"./webby-previews/legacy.jpg\""));
+    assert!(local_manifest.contains("\"previewUrl\": null"));
 
     let caddy_out = webby(tmp.path(), &config)
         .args(["deploy", "-b", "caddy"])

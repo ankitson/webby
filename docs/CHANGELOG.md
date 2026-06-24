@@ -353,3 +353,13 @@ Modified:
 
 Why:
 - The primary cards should be discoverable and laid out during the initial HTML parse so generated pages feel snappy and avoid JS-driven layout swaps.
+
+### Existing Preview Asset Fallbacks
+
+Modified:
+- Generated card manifests and static indexes now use the preview asset that already exists in the bag, preferring `.webp` and falling back to `.jpg`, `.jpeg`, or `.png`.
+- Missing previews now render as blank preview tiles instead of pointing generated data at a nonexistent default image.
+- `webby-card-grid` treats `previewUrl: null` as an intentional blank preview while preserving default `.webp` fallback behavior for older embed data that omits the field.
+
+Why:
+- Existing internal bags may still have legacy JPEG previews; deploy should not break those images just because new previews are generated as optimized WebP by default.

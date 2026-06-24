@@ -359,3 +359,16 @@ Verification:
 - `cargo fmt --check`
 - `cargo test`
 - Browser smoke test against a locally served generated public-style index.
+
+## 2026-06-24 — Existing Preview Asset Fallbacks
+
+Goal: restore internal card images after deploying Webby with WebP preview defaults against a bag that still contains legacy JPEG previews.
+
+Decision:
+- Generate bag-specific card data from files present in `webby-previews/`, preferring `.webp` and falling back to `.jpg`, `.jpeg`, or `.png`.
+- Render no static preview image, and serialize `previewUrl: null`, when no matching preview asset exists.
+- Keep the reusable card-grid default `.webp` fallback for older data that omits `previewUrl`, but treat explicit `null` as an intentional blank tile.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`
