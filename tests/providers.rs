@@ -102,7 +102,7 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     write_named_app(&local, "app");
     write_named_app(&local, "other");
     fs::create_dir_all(local.join("webby-previews")).unwrap();
-    fs::write(local.join("webby-previews").join("app.jpg"), "jpeg").unwrap();
+    fs::write(local.join("webby-previews").join("app.webp"), "webp").unwrap();
     write_app(&caddy);
     let config = write_config(
         tmp.path(),
@@ -593,21 +593,54 @@ fn preview_uses_shot_scraper_via_uvx() {
         &bin_dir,
         "uvx",
         r#"#!/bin/sh
-echo "uvx $*" >> "$WEBBY_CAPTURE"
+if [ "$1" = "shot-scraper" ]; then
+  out=""
+  prev=""
+  for arg in "$@"; do
+    if [ "$prev" = "--output" ]; then out="$arg"; fi
+    prev="$arg"
+  done
+  if [ -z "$out" ]; then exit 2; fi
+  echo "uvx shot-scraper $*" >> "$WEBBY_CAPTURE"
+  printf "jpeg" > "$out"
+  exit 0
+fi
+
+source=""
 out=""
-prev=""
+width=""
+quality=""
+after_c=0
 for arg in "$@"; do
-  if [ "$prev" = "--output" ]; then out="$arg"; fi
-  prev="$arg"
+  if [ "$after_c" = "1" ]; then
+    after_c=2
+  elif [ "$after_c" = "2" ]; then
+    source="$arg"
+    after_c=3
+  elif [ "$after_c" = "3" ]; then
+    out="$arg"
+    after_c=4
+  elif [ "$after_c" = "4" ]; then
+    width="$arg"
+    after_c=5
+  elif [ "$after_c" = "5" ]; then
+    quality="$arg"
+    after_c=6
+  elif [ "$arg" = "-c" ]; then
+    after_c=1
+  fi
 done
-if [ -z "$out" ]; then exit 2; fi
-printf "jpeg" > "$out"
+if [ -z "$source" ] || [ -z "$out" ] || [ ! -f "$source" ]; then exit 2; fi
+echo "uvx pillow width=$width quality=$quality output=$out" >> "$WEBBY_CAPTURE"
+printf "webp" > "$out"
 exit 0
 "#,
     );
 
     let local = tmp.path().join("local");
     write_app(&local);
+    fs::create_dir_all(local.join("webby-previews")).unwrap();
+    fs::write(local.join("webby-previews").join("app.jpg"), "legacy jpeg").unwrap();
     let config = write_config(
         tmp.path(),
         &format!(
@@ -644,12 +677,20 @@ exit 0
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    assert!(local.join("webby-previews").join("app.jpg").exists());
-    assert!(!local.join("webby-previews").join("other.jpg").exists());
+    assert!(local.join("webby-previews").join("app.webp").exists());
+    assert!(!local.join("webby-previews").join("app.jpg").exists());
+    assert!(
+        !local
+            .join("webby-previews")
+            .join("app.capture.jpg")
+            .exists()
+    );
+    assert!(!local.join("webby-previews").join("other.webp").exists());
 
     let log = fs::read_to_string(capture).unwrap();
     assert!(log.contains("uvx shot-scraper shot"));
-    assert_eq!(log.lines().count(), 1);
+    assert!(log.contains("uvx pillow width=960 quality=78"));
+    assert_eq!(log.lines().count(), 2);
     assert!(log.contains("--width 640 --height 360"));
     assert!(log.contains("--wait 2000"));
     assert!(log.contains("--timeout 2000"));

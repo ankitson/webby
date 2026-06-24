@@ -9,6 +9,28 @@ use crate::config::Bag;
 use crate::{Result, err};
 
 pub const PREVIEW_DIR: &str = "webby-previews";
+pub const PREVIEW_EXT: &str = "webp";
+
+const OPTIMIZED_WIDTH: u32 = 960;
+const WEBP_QUALITY: u8 = 78;
+const WEBP_OPTIMIZE_SCRIPT: &str = r#"
+import sys
+from pathlib import Path
+from PIL import Image
+
+source = Path(sys.argv[1])
+output = Path(sys.argv[2])
+width = int(sys.argv[3])
+quality = int(sys.argv[4])
+
+image = Image.open(source).convert("RGB")
+if image.width > width:
+    height = round(image.height * width / image.width)
+    resampling = getattr(getattr(Image, "Resampling", Image), "LANCZOS")
+    image = image.resize((width, height), resampling)
+
+image.save(output, format="WEBP", quality=quality, method=6)
+"#;
 
 pub fn capture_previews(
     bag: &Bag,
@@ -38,7 +60,7 @@ pub fn capture_previews(
     let mut failed = 0usize;
 
     for app in apps {
-        let out = out_dir.join(format!("{}.jpg", preview_slug(&app.name)));
+        let out = out_dir.join(format!("{}.{}", preview_slug(&app.name), PREVIEW_EXT));
         if out.exists() && !force {
             skipped += 1;
             println!("skip {} ({})", app.name, out.display());
@@ -46,11 +68,13 @@ pub fn capture_previews(
         }
 
         let path = capture_path(bag, &app);
+        let capture_out = out.with_extension("capture.jpg");
         print!("capture {} ... ", app.name);
         let _ = std::io::stdout().flush();
-        match capture_with_shot_scraper(&path, &out, width, height, timeout) {
+        match capture_optimized_preview(&path, &capture_out, &out, width, height, timeout) {
             Ok(()) => {
                 captured += 1;
+                remove_legacy_preview_jpegs(&out);
                 println!("{}", out.display());
             }
             Err(error) => {
@@ -69,6 +93,25 @@ pub fn capture_previews(
         out_dir.display()
     );
     Ok(())
+}
+
+fn remove_legacy_preview_jpegs(out: &Path) {
+    let _ = fs::remove_file(out.with_extension("jpg"));
+    let _ = fs::remove_file(out.with_extension("jpeg"));
+}
+
+fn capture_optimized_preview(
+    path: &Path,
+    capture_out: &Path,
+    out: &Path,
+    width: u32,
+    height: u32,
+    timeout: Duration,
+) -> Result<()> {
+    capture_with_shot_scraper(path, capture_out, width, height, timeout)?;
+    let result = optimize_preview(capture_out, out);
+    let _ = fs::remove_file(capture_out);
+    result
 }
 
 fn filter_apps(apps: Vec<AppEntry>, name: &str) -> Vec<AppEntry> {
@@ -144,6 +187,43 @@ fn capture_with_shot_scraper(
         stdout
     } else {
         format!("shot-scraper exited with {}", result.status)
+    };
+    Err(err(detail))
+}
+
+fn optimize_preview(source: &Path, out: &Path) -> Result<()> {
+    let source_arg = path_to_arg(source);
+    let output_arg = path_to_arg(out);
+    let width = OPTIMIZED_WIDTH.to_string();
+    let quality = WEBP_QUALITY.to_string();
+
+    let result = Command::new("uvx")
+        .args([
+            "--with",
+            "pillow",
+            "python",
+            "-c",
+            WEBP_OPTIMIZE_SCRIPT,
+            &source_arg,
+            &output_arg,
+            &width,
+            &quality,
+        ])
+        .output()
+        .map_err(|e| err(format!("failed to run `uvx --with pillow python`: {e}")))?;
+
+    if result.status.success() && out.exists() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&result.stderr).trim().to_string();
+    let stdout = String::from_utf8_lossy(&result.stdout).trim().to_string();
+    let detail = if !stderr.is_empty() {
+        stderr
+    } else if !stdout.is_empty() {
+        stdout
+    } else {
+        format!("preview optimization exited with {}", result.status)
     };
     Err(err(detail))
 }

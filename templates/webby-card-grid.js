@@ -461,7 +461,7 @@ export class WebbyCardGrid extends HTMLElement {
 
   renderCard(item) {
     const hue = hueFor(item.id);
-    const previewUrl = item.previewUrl || `${this.previewBase}${previewSlug(item.id)}.jpg`;
+    const previewUrl = item.previewUrl || `${this.previewBase}${previewSlug(item.id)}.webp`;
 
     const card = document.createElement("article");
     card.className = "site";

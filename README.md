@@ -49,11 +49,13 @@ webby init
 An app is a folder with `index.html` or a standalone `.html` file. Names that
 start with `tmp` are shown under the Temp section in generated indexes.
 
-`webby preview -b BAG` captures static JPEG card previews into the bag's
-`webby-previews/` directory. It shells out to `uvx shot-scraper`, skips
-existing previews unless `--force` is passed, and keeps generated indexes fast
-by serving images instead of live iframes. Pass an app name, for example
-`webby preview jobsearch-docs -b internal --force`, to refresh one preview.
+`webby preview -b BAG` captures static card previews into the bag's
+`webby-previews/` directory as optimized WebP images. It shells out to
+`uvx shot-scraper` for capture and `uvx --with pillow python` for resizing and
+conversion, skips existing previews unless `--force` is passed, and keeps
+generated indexes fast by serving images instead of live iframes. Pass an app
+name, for example `webby preview jobsearch-docs -b internal --force`, to
+refresh one preview.
 
 Every deploy writes `webby-cards.json` next to the generated assets. That JSON
 contains the same card data used by Webby's index component, so another page can

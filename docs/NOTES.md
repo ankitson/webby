@@ -316,3 +316,15 @@ Key decisions:
 Next steps:
 - Decide on release packaging and whether to publish binaries in addition to `cargo install`.
 - Revisit Cloudflare domain attachment once the preferred Wrangler/API path is confirmed for OSS users.
+
+## 2026-06-23 — Optimized Preview Images
+
+Goal: make the blog's WebP preview optimization the default behavior of generated Webby previews.
+
+Decision:
+- Keep `shot-scraper` as the capture backend, but write captures to a temporary JPEG.
+- Convert each capture to a 960px-wide optimized WebP at quality 78 through Pillow via `uvx`, matching the blog helper's behavior.
+- Point generated card data, preloads, and component fallbacks at `.webp` previews so consumers use the optimized assets by default.
+
+Verification:
+- `cargo fmt --check`

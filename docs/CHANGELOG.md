@@ -318,3 +318,15 @@ Modified:
 
 Why:
 - The OSS version should be simple to install with Cargo, useful with zero config, and backed by provider deploy tests.
+
+## 2026-06-23
+
+### Optimized Preview Images
+
+Modified:
+- `webby preview` now captures through a temporary JPEG and writes optimized `.webp` preview files by default.
+- Generated card manifests, index preloads, and the card-grid fallback now point at `webby-previews/*.webp`.
+- Preview capture tests now cover both the screenshot and optimization tool invocations.
+
+Why:
+- The blog had a separate post-processing step for smaller WebP preview assets; Webby should generate those optimized card images directly.

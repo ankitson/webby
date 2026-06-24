@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::app::AppEntry;
-use crate::preview::{PREVIEW_DIR, preview_slug};
+use crate::preview::{PREVIEW_DIR, PREVIEW_EXT, preview_slug};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,7 +29,12 @@ pub fn from_app_entry(app: &AppEntry) -> CardItem {
         category: property_string(&app.metadata.properties, "category"),
         properties: app.metadata.properties.clone(),
         tmp: app.tmp,
-        preview_url: Some(format!("./{}/{}.jpg", PREVIEW_DIR, preview_slug(&app.name))),
+        preview_url: Some(format!(
+            "./{}/{}.{}",
+            PREVIEW_DIR,
+            preview_slug(&app.name),
+            PREVIEW_EXT
+        )),
         icon: None,
     }
 }
