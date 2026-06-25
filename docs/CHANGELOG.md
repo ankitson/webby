@@ -1,3 +1,22 @@
+## 2026-06-25
+
+### Preview Cache Busting
+
+Added:
+- Generated `previewUrl` values now include `?v=<content-hash>` when the matching WebP preview exists.
+- `webby preview` now detects stale previews by comparing staged app source mtimes against preview mtimes.
+- `webby preview` regenerates `webby-cards.json` and the index after capture so new hashes are published.
+- `webby add`, `webby docs`, and `webby pub` now capture the newly staged app preview by default.
+- `webby deploy` now refreshes missing or stale previews before generating deploy artifacts.
+- `--no-preview` skips automatic preview capture on `add`, `docs`, `pub`, and `deploy`.
+
+Modified:
+- Preview tests cover stale recapture, fresh skip behavior, and hash-bearing manifest output.
+- README documents the stale-preview and cache-busting behavior.
+
+Why:
+- Host pages can safely cache preview images while still receiving changed thumbnails whenever Webby writes new image bytes.
+
 ## 2026-06-24
 
 ### Release Prep

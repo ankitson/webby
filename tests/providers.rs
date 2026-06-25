@@ -94,6 +94,50 @@ fn fake_exe(dir: &Path, name: &str, body: &str) {
     fs::set_permissions(path, perms).unwrap();
 }
 
+const FAKE_UVX_PREVIEW_TOOL: &str = r#"#!/bin/sh
+if [ "$1" = "shot-scraper" ]; then
+  out=""
+  prev=""
+  for arg in "$@"; do
+    if [ "$prev" = "--output" ]; then out="$arg"; fi
+    prev="$arg"
+  done
+  if [ -z "$out" ]; then exit 2; fi
+  echo "uvx shot-scraper $*" >> "$WEBBY_CAPTURE"
+  printf "jpeg" > "$out"
+  exit 0
+fi
+
+source=""
+out=""
+width=""
+quality=""
+after_c=0
+for arg in "$@"; do
+  if [ "$after_c" = "1" ]; then
+    after_c=2
+  elif [ "$after_c" = "2" ]; then
+    source="$arg"
+    after_c=3
+  elif [ "$after_c" = "3" ]; then
+    out="$arg"
+    after_c=4
+  elif [ "$after_c" = "4" ]; then
+    width="$arg"
+    after_c=5
+  elif [ "$after_c" = "5" ]; then
+    quality="$arg"
+    after_c=6
+  elif [ "$arg" = "-c" ]; then
+    after_c=1
+  fi
+done
+if [ -z "$source" ] || [ -z "$out" ] || [ ! -f "$source" ]; then exit 2; fi
+echo "uvx pillow width=$width quality=$quality output=$out" >> "$WEBBY_CAPTURE"
+printf "webp" > "$out"
+exit 0
+"#;
+
 #[test]
 fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     let tmp = TestDir::new("local-caddy");
@@ -120,7 +164,7 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     );
 
     let local_out = webby(tmp.path(), &config)
-        .args(["deploy", "-b", "local"])
+        .args(["deploy", "-b", "local", "--no-preview"])
         .output()
         .unwrap();
     assert!(
@@ -134,7 +178,7 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     assert!(local_index.contains("<div class=\"webby-grid\" aria-label=\"Sites\">"));
     assert!(
         local_index.contains(
-            "<img class=\"webby-preview-image\" src=\"./webby-previews/app.webp\" alt=\"\""
+            "<img class=\"webby-preview-image\" src=\"./webby-previews/app.webp?v=3d7cfef619e9d533\" alt=\"\""
         )
     );
     assert!(local_index.contains(
@@ -145,12 +189,14 @@ fn deploy_local_and_caddy_generate_indexes_without_external_commands() {
     assert!(!local_index.contains("<script type=\"module\">"));
     let local_manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
     assert!(!local_manifest.contains("\"id\": \"webby-previews\""));
-    assert!(local_manifest.contains("\"previewUrl\": \"./webby-previews/app.webp\""));
+    assert!(
+        local_manifest.contains("\"previewUrl\": \"./webby-previews/app.webp?v=3d7cfef619e9d533\"")
+    );
     assert!(local_manifest.contains("\"previewUrl\": \"./webby-previews/other.webp\""));
     assert!(!local_manifest.contains("\"previewUrl\": null"));
 
     let caddy_out = webby(tmp.path(), &config)
-        .args(["deploy", "-b", "caddy"])
+        .args(["deploy", "-b", "caddy", "--no-preview"])
         .output()
         .unwrap();
     assert!(
@@ -198,7 +244,7 @@ fn deploy_inlines_configured_index_chrome_fragments() {
     );
 
     let out = webby(tmp.path(), &config)
-        .args(["deploy", "-b", "local"])
+        .args(["deploy", "-b", "local", "--no-preview"])
         .output()
         .unwrap();
     assert!(
@@ -235,7 +281,7 @@ fn no_index_bag_writes_card_manifest_without_page() {
     );
 
     let out = webby(tmp.path(), &config)
-        .args(["deploy", "-b", "caddy"])
+        .args(["deploy", "-b", "caddy", "--no-preview"])
         .output()
         .unwrap();
     assert!(
@@ -294,7 +340,7 @@ fn generated_manifest_uses_app_owned_webby_metadata() {
     );
 
     let out = webby(tmp.path(), &config)
-        .args(["deploy", "-b", "local"])
+        .args(["deploy", "-b", "local", "--no-preview"])
         .output()
         .unwrap();
     assert!(
@@ -347,6 +393,7 @@ fn add_can_write_metadata_properties_into_staged_app() {
             "category=Documents",
             "--property",
             "kind=report",
+            "--no-preview",
         ])
         .output()
         .unwrap();
@@ -366,6 +413,57 @@ fn add_can_write_metadata_properties_into_staged_app() {
     assert!(manifest.contains("\"description\": \"Self-contained metadata\""));
     assert!(manifest.contains("\"category\": \"Documents\""));
     assert!(manifest.contains("\"kind\": \"report\""));
+}
+
+#[test]
+fn add_generates_preview_for_staged_app_by_default() {
+    let tmp = TestDir::new("add-preview");
+    let bin_dir = tmp.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let capture = tmp.path().join("uvx.log");
+    fake_exe(&bin_dir, "uvx", FAKE_UVX_PREVIEW_TOOL);
+
+    let source = tmp.path().join("source");
+    let local = tmp.path().join("local");
+    fs::create_dir_all(&source).unwrap();
+    fs::write(
+        source.join("report.html"),
+        "<!doctype html><html><head><title>Report</title></head><body>ok</body></html>",
+    )
+    .unwrap();
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .env("PATH", &bin_dir)
+        .env("WEBBY_CAPTURE", &capture)
+        .args(["add", source.join("report.html").to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    assert!(local.join("webby-previews").join("report.webp").exists());
+    let manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
+    assert!(
+        manifest.contains("\"previewUrl\": \"./webby-previews/report.webp?v=3d7cfef619e9d533\"")
+    );
+    let log = fs::read_to_string(&capture).unwrap();
+    assert!(log.contains("uvx shot-scraper shot"));
+    assert_eq!(log.lines().count(), 2);
 }
 
 #[test]
@@ -429,6 +527,7 @@ Install things.
             "source-docs",
             "--property",
             "category=Documents",
+            "--no-preview",
         ])
         .output()
         .unwrap();
@@ -501,6 +600,7 @@ fn docs_synthesizes_home_and_does_not_copy_outside_root_links() {
             "notes",
             "--title",
             "Notes",
+            "--no-preview",
         ])
         .output()
         .unwrap();
@@ -540,7 +640,7 @@ fn deploy_no_index_flag_skips_root_index_without_config_mode() {
     );
 
     let out = webby(tmp.path(), &config)
-        .args(["deploy", "-b", "caddy", "--no-index"])
+        .args(["deploy", "-b", "caddy", "--no-index", "--no-preview"])
         .output()
         .unwrap();
     assert!(
@@ -584,6 +684,7 @@ fn add_directory_skips_local_metadata_dirs() {
             source.join("source-app").to_str().unwrap(),
             "-b",
             "public",
+            "--no-preview",
         ])
         .output()
         .unwrap();
@@ -605,53 +706,7 @@ fn preview_uses_shot_scraper_via_uvx() {
     let bin_dir = tmp.path().join("bin");
     fs::create_dir_all(&bin_dir).unwrap();
     let capture = tmp.path().join("uvx.log");
-    fake_exe(
-        &bin_dir,
-        "uvx",
-        r#"#!/bin/sh
-if [ "$1" = "shot-scraper" ]; then
-  out=""
-  prev=""
-  for arg in "$@"; do
-    if [ "$prev" = "--output" ]; then out="$arg"; fi
-    prev="$arg"
-  done
-  if [ -z "$out" ]; then exit 2; fi
-  echo "uvx shot-scraper $*" >> "$WEBBY_CAPTURE"
-  printf "jpeg" > "$out"
-  exit 0
-fi
-
-source=""
-out=""
-width=""
-quality=""
-after_c=0
-for arg in "$@"; do
-  if [ "$after_c" = "1" ]; then
-    after_c=2
-  elif [ "$after_c" = "2" ]; then
-    source="$arg"
-    after_c=3
-  elif [ "$after_c" = "3" ]; then
-    out="$arg"
-    after_c=4
-  elif [ "$after_c" = "4" ]; then
-    width="$arg"
-    after_c=5
-  elif [ "$after_c" = "5" ]; then
-    quality="$arg"
-    after_c=6
-  elif [ "$arg" = "-c" ]; then
-    after_c=1
-  fi
-done
-if [ -z "$source" ] || [ -z "$out" ] || [ ! -f "$source" ]; then exit 2; fi
-echo "uvx pillow width=$width quality=$quality output=$out" >> "$WEBBY_CAPTURE"
-printf "webp" > "$out"
-exit 0
-"#,
-    );
+    fake_exe(&bin_dir, "uvx", FAKE_UVX_PREVIEW_TOOL);
 
     let local = tmp.path().join("local");
     write_app(&local);
@@ -710,6 +765,155 @@ exit 0
     assert!(log.contains("--width 640 --height 360"));
     assert!(log.contains("--wait 2000"));
     assert!(log.contains("--timeout 2000"));
+}
+
+#[test]
+fn preview_recaptures_stale_assets_and_refreshes_manifest_hash() {
+    let tmp = TestDir::new("preview-stale");
+    let bin_dir = tmp.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let capture = tmp.path().join("uvx.log");
+    fake_exe(&bin_dir, "uvx", FAKE_UVX_PREVIEW_TOOL);
+
+    let local = tmp.path().join("local");
+    fs::create_dir_all(local.join("webby-previews")).unwrap();
+    fs::write(local.join("webby-previews").join("app.webp"), "old webp").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    write_app(&local);
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .env("PATH", &bin_dir)
+        .env("WEBBY_CAPTURE", &capture)
+        .args(["preview", "app", "-b", "local"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("capture app"));
+    assert!(local.join("webby-cards.json").exists());
+    let manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
+    assert!(manifest.contains("\"previewUrl\": \"./webby-previews/app.webp?v=3d7cfef619e9d533\""));
+    let log = fs::read_to_string(&capture).unwrap();
+    assert_eq!(log.lines().count(), 2);
+
+    fs::write(&capture, "").unwrap();
+    let fresh_out = webby(tmp.path(), &config)
+        .env("PATH", &bin_dir)
+        .env("WEBBY_CAPTURE", &capture)
+        .args(["preview", "app", "-b", "local"])
+        .output()
+        .unwrap();
+    assert!(
+        fresh_out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&fresh_out.stderr)
+    );
+    let fresh_stdout = String::from_utf8_lossy(&fresh_out.stdout);
+    assert!(fresh_stdout.contains("skip app"));
+    assert_eq!(fs::read_to_string(&capture).unwrap(), "");
+}
+
+#[test]
+fn deploy_refreshes_stale_previews_by_default() {
+    let tmp = TestDir::new("deploy-preview-stale");
+    let bin_dir = tmp.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let capture = tmp.path().join("uvx.log");
+    fake_exe(&bin_dir, "uvx", FAKE_UVX_PREVIEW_TOOL);
+
+    let local = tmp.path().join("local");
+    fs::create_dir_all(local.join("webby-previews")).unwrap();
+    fs::write(local.join("webby-previews").join("app.webp"), "old webp").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    write_app(&local);
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .env("PATH", &bin_dir)
+        .env("WEBBY_CAPTURE", &capture)
+        .args(["deploy", "-b", "local"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("capture app"));
+    assert!(stdout.contains("ready: 1 app(s)"));
+    let manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
+    assert!(manifest.contains("\"previewUrl\": \"./webby-previews/app.webp?v=3d7cfef619e9d533\""));
+    assert_eq!(fs::read_to_string(&capture).unwrap().lines().count(), 2);
+}
+
+#[test]
+fn deploy_no_preview_skips_stale_preview_refresh() {
+    let tmp = TestDir::new("deploy-no-preview");
+    let bin_dir = tmp.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let capture = tmp.path().join("uvx.log");
+    fake_exe(&bin_dir, "uvx", FAKE_UVX_PREVIEW_TOOL);
+
+    let local = tmp.path().join("local");
+    fs::create_dir_all(local.join("webby-previews")).unwrap();
+    fs::write(local.join("webby-previews").join("app.webp"), "old webp").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    write_app(&local);
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "defaultBag": "local",
+              "bags": {{
+                "local": {{ "dir": "{}", "host": {{ "type": "local", "port": 7777 }} }}
+              }}
+            }}"#,
+            local.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .env("PATH", &bin_dir)
+        .env("WEBBY_CAPTURE", &capture)
+        .args(["deploy", "-b", "local", "--no-preview"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(!capture.exists());
+    let manifest = fs::read_to_string(local.join("webby-cards.json")).unwrap();
+    assert!(manifest.contains("\"previewUrl\": \"./webby-previews/app.webp?v=653be97d3d61e6ec\""));
 }
 
 #[test]
@@ -853,7 +1057,7 @@ exit 0
         let out = webby(tmp.path(), &config)
             .env("PATH", &path)
             .env("WEBBY_CAPTURE", &capture)
-            .args(["deploy", "-b", bag])
+            .args(["deploy", "-b", bag, "--no-preview"])
             .output()
             .unwrap();
         assert!(
@@ -923,7 +1127,7 @@ exit 0
         .env("PATH", path)
         .env("WEBBY_CAPTURE", &capture)
         .env("WEBBY_TEST_CF_TOKEN", "secret-token")
-        .args(["deploy", "-b", "public"])
+        .args(["deploy", "-b", "public", "--no-preview"])
         .output()
         .unwrap();
     assert!(
@@ -982,7 +1186,7 @@ exit 0
         .env("PATH", bin_dir)
         .env("WEBBY_CAPTURE", &capture)
         .env("WEBBY_TEST_CF_TOKEN", "secret-token")
-        .args(["deploy", "-b", "public"])
+        .args(["deploy", "-b", "public", "--no-preview"])
         .output()
         .unwrap();
     assert!(
@@ -1026,7 +1230,7 @@ fn deploy_command_provider_expands_template() {
     );
 
     let out = webby(tmp.path(), &config)
-        .args(["deploy", "-b", "cmd"])
+        .args(["deploy", "-b", "cmd", "--no-preview"])
         .output()
         .unwrap();
     assert!(

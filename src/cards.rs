@@ -29,7 +29,7 @@ pub fn from_app_entry(app: &AppEntry) -> CardItem {
         category: property_string(&app.metadata.properties, "category"),
         properties: app.metadata.properties.clone(),
         tmp: app.tmp,
-        preview_url: Some(preview_url(&app.name)),
+        preview_url: Some(versioned_preview_url(app)),
         icon: None,
     }
 }
@@ -41,6 +41,14 @@ fn preview_url(app_name: &str) -> String {
         preview_slug(app_name),
         PREVIEW_EXT
     )
+}
+
+fn versioned_preview_url(app: &AppEntry) -> String {
+    let url = preview_url(&app.name);
+    match &app.preview_version {
+        Some(version) => format!("{url}?v={version}"),
+        None => url,
+    }
 }
 
 fn display_title(app: &AppEntry) -> String {

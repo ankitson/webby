@@ -30,10 +30,10 @@ A bag is a named directory plus a hosting provider. Apps are copied into a bag,
 then the provider decides how that directory gets a URL.
 
 ```sh
-webby add <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [-b BAG]
-webby docs <dir> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [-b BAG]
-webby pub <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V]
-webby deploy -b BAG
+webby add <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [--no-preview] [-b BAG]
+webby docs <dir> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [--no-preview] [-b BAG]
+webby pub <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [--no-preview]
+webby deploy -b BAG [--no-preview]
 webby preview [APP] -b BAG [--force]
 webby serve [-b BAG] [--port N]
 webby ls [-b BAG]
@@ -49,13 +49,18 @@ webby init
 An app is a folder with `index.html` or a standalone `.html` file. Names that
 start with `tmp` are shown under the Temp section in generated indexes.
 
-`webby preview -b BAG` captures static card previews into the bag's
-`webby-previews/` directory as optimized WebP images. It shells out to
-`uvx shot-scraper` for capture and `uvx --with pillow python` for resizing and
-conversion, skips existing previews unless `--force` is passed, and keeps
-generated indexes fast by serving images instead of live iframes. Pass an app
-name, for example `webby preview jobsearch-docs -b internal --force`, to
-refresh one preview.
+Card previews live in `webby-previews/` as optimized WebP images. `webby add`,
+`webby docs`, and `webby pub` capture the newly staged app by default. `webby
+deploy -b BAG` refreshes missing or stale previews before publishing card data;
+a preview is stale when the staged app source is newer than the existing image.
+Pass `--no-preview` to skip automatic capture on those commands.
+
+`webby preview -b BAG` runs the same capture pipeline explicitly. It shells out
+to `uvx shot-scraper` for capture and `uvx --with pillow python` for resizing
+and conversion, skips fresh previews, and can refresh one app with a command
+like `webby preview jobsearch-docs -b internal --force`. Generated preview URLs
+include a content hash query string when the image exists, so hosts can cache
+preview images aggressively while revalidating `webby-cards.json`.
 
 `webby preview-url URL output.webp` uses the same capture and WebP optimization
 pipeline for pages that are not staged in a Webby bag, such as a host homepage
@@ -233,7 +238,9 @@ also writes a standalone static `index.html` for the bag root.
 
 Set `noIndex: true` on a bag, or pass `--no-index` to `add`, `pub`, `deploy`,
 or `serve`, when a larger site consumes the card data and the bag should not
-publish its own root index page.
+publish its own root index page. Pass `--no-preview` to `add`, `docs`, `pub`, or
+`deploy` when you only want card data regenerated and do not want screenshot
+capture to run.
 
 Set `indexChromeDir` on a bag to inline optional `head.html` and `body.html`
 fragments into the generated root index. This is intended for host-site chrome

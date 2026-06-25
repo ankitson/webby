@@ -22,6 +22,10 @@ use crate::providers::{after_add, attach_domain, base_url, deploy_bag, open_app}
 
 pub type Result<T> = std::result::Result<T, WebbyError>;
 
+const DEFAULT_PREVIEW_WIDTH: u32 = 1200;
+const DEFAULT_PREVIEW_HEIGHT: u32 = 750;
+const DEFAULT_PREVIEW_TIMEOUT_SECS: u64 = 8;
+
 #[derive(Debug)]
 pub struct WebbyError(String);
 
@@ -75,6 +79,9 @@ enum Command {
         /// Do not write the bag root index.html for this generation.
         #[arg(long)]
         no_index: bool,
+        /// Do not capture or refresh preview images after staging.
+        #[arg(long)]
+        no_preview: bool,
     },
     /// Generate and stage a static docs app from a Markdown directory.
     Docs {
@@ -103,6 +110,9 @@ enum Command {
         /// Do not write the bag root index.html for this generation.
         #[arg(long)]
         no_index: bool,
+        /// Do not capture or refresh preview images after staging.
+        #[arg(long)]
+        no_preview: bool,
     },
     /// Stage into the public bag and deploy it.
     Pub {
@@ -123,6 +133,9 @@ enum Command {
         /// Do not write the public bag root index.html for this publish.
         #[arg(long)]
         no_index: bool,
+        /// Do not capture or refresh preview images before publishing.
+        #[arg(long)]
+        no_preview: bool,
     },
     /// Deploy or activate a bag.
     Deploy {
@@ -133,6 +146,9 @@ enum Command {
         /// Do not write the bag root index.html for this deploy.
         #[arg(long)]
         no_index: bool,
+        /// Do not capture missing or stale preview images before deploy.
+        #[arg(long)]
+        no_preview: bool,
     },
     /// Serve a bag on localhost.
     Serve {
@@ -182,11 +198,11 @@ enum Command {
         bag: Option<String>,
         #[arg(long)]
         force: bool,
-        #[arg(long, default_value_t = 1200)]
+        #[arg(long, default_value_t = DEFAULT_PREVIEW_WIDTH)]
         width: u32,
-        #[arg(long, default_value_t = 750)]
+        #[arg(long, default_value_t = DEFAULT_PREVIEW_HEIGHT)]
         height: u32,
-        #[arg(long, default_value_t = 8)]
+        #[arg(long, default_value_t = DEFAULT_PREVIEW_TIMEOUT_SECS)]
         timeout_secs: u64,
     },
     /// Capture one URL or file path as an optimized WebP preview.
@@ -195,11 +211,11 @@ enum Command {
         output: PathBuf,
         #[arg(long)]
         force: bool,
-        #[arg(long, default_value_t = 1200)]
+        #[arg(long, default_value_t = DEFAULT_PREVIEW_WIDTH)]
         width: u32,
-        #[arg(long, default_value_t = 750)]
+        #[arg(long, default_value_t = DEFAULT_PREVIEW_HEIGHT)]
         height: u32,
-        #[arg(long, default_value_t = 8)]
+        #[arg(long, default_value_t = DEFAULT_PREVIEW_TIMEOUT_SECS)]
         timeout_secs: u64,
     },
 }
@@ -232,6 +248,7 @@ fn run() -> Result<()> {
             description,
             properties,
             no_index,
+            no_preview,
         } => cmd_add(
             &Config::load()?,
             path,
@@ -240,6 +257,7 @@ fn run() -> Result<()> {
             tmp,
             metadata_overrides(title, description, properties)?,
             no_index,
+            no_preview,
         ),
         Command::Docs {
             path,
@@ -252,6 +270,7 @@ fn run() -> Result<()> {
             depth,
             max_asset_size_mib,
             no_index,
+            no_preview,
         } => cmd_docs(
             &Config::load()?,
             path,
@@ -266,6 +285,7 @@ fn run() -> Result<()> {
                 max_asset_size: max_asset_size_mib.saturating_mul(1024 * 1024),
             },
             no_index,
+            no_preview,
         ),
         Command::Pub {
             path,
@@ -275,6 +295,7 @@ fn run() -> Result<()> {
             description,
             properties,
             no_index,
+            no_preview,
         } => cmd_pub(
             &Config::load()?,
             path,
@@ -282,14 +303,19 @@ fn run() -> Result<()> {
             tmp,
             metadata_overrides(title, description, properties)?,
             no_index,
+            no_preview,
         ),
         Command::Deploy {
             bag,
             port,
             no_index,
+            no_preview,
         } => {
             let cfg = Config::load()?;
             let bag = with_no_index(cfg.bag(&bag)?, no_index);
+            if !no_preview {
+                refresh_previews(&bag, None)?;
+            }
             deploy_bag(&bag, port)
         }
         Command::Serve {
@@ -320,7 +346,9 @@ fn run() -> Result<()> {
                 height,
                 std::time::Duration::from_secs(timeout_secs),
                 app.as_deref(),
-            )
+            )?;
+            generate_index(bag)?;
+            Ok(())
         }
         Command::PreviewUrl {
             url,
@@ -348,6 +376,7 @@ fn cmd_add(
     tmp: bool,
     metadata: MetadataOverrides,
     no_index: bool,
+    no_preview: bool,
 ) -> Result<()> {
     let bag = with_no_index(select_bag(cfg, bag)?, no_index);
     let staged = stage_app(&path, &bag, name, tmp)?;
@@ -356,7 +385,7 @@ fn cmd_add(
         staged.is_dir,
         &metadata,
     )?;
-    generate_index(&bag)?;
+    refresh_previews_and_index(&bag, Some(&staged.name), no_preview)?;
     after_add(&bag)?;
 
     println!("✓ {} → {} bag", staged.name, bag.label);
@@ -402,6 +431,7 @@ fn cmd_pub(
     tmp: bool,
     metadata: MetadataOverrides,
     no_index: bool,
+    no_preview: bool,
 ) -> Result<()> {
     let bag = with_no_index(cfg.bag("public")?, no_index);
     let staged = stage_app(&path, &bag, name, tmp)?;
@@ -410,6 +440,7 @@ fn cmd_pub(
         staged.is_dir,
         &metadata,
     )?;
+    refresh_previews_and_index(&bag, Some(&staged.name), no_preview)?;
     println!("✓ {} → public bag", staged.name);
     deploy_bag(&bag, None)
 }
@@ -420,10 +451,11 @@ fn cmd_docs(
     bag: Option<&str>,
     options: DocsOptions,
     no_index: bool,
+    no_preview: bool,
 ) -> Result<()> {
     let bag = with_no_index(select_bag(cfg, bag)?, no_index);
     let docs = build_docs_app(&path, &bag.dir, &options)?;
-    generate_index(&bag)?;
+    refresh_previews_and_index(&bag, Some(&docs.name), no_preview)?;
     after_add(&bag)?;
     println!(
         "✓ generated {} docs pages → {} bag",
@@ -462,6 +494,29 @@ fn cmd_docs(
         ),
     }
     Ok(())
+}
+
+fn refresh_previews_and_index(
+    bag: &config::Bag,
+    app_filter: Option<&str>,
+    no_preview: bool,
+) -> Result<()> {
+    if !no_preview {
+        refresh_previews(bag, app_filter)?;
+    }
+    generate_index(bag)?;
+    Ok(())
+}
+
+fn refresh_previews(bag: &config::Bag, app_filter: Option<&str>) -> Result<()> {
+    capture_previews(
+        bag,
+        false,
+        DEFAULT_PREVIEW_WIDTH,
+        DEFAULT_PREVIEW_HEIGHT,
+        std::time::Duration::from_secs(DEFAULT_PREVIEW_TIMEOUT_SECS),
+        app_filter,
+    )
 }
 
 fn staged_app_path(bag: &config::Bag, name: &str, is_dir: bool) -> PathBuf {

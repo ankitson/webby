@@ -145,6 +145,7 @@ mod tests {
                 href: "./alpha/".to_string(),
                 tmp: false,
                 metadata: AppMetadata::default(),
+                preview_version: None,
             },
             AppEntry {
                 name: "tmp-beta".to_string(),
@@ -152,6 +153,7 @@ mod tests {
                 href: "./tmp-beta.html".to_string(),
                 tmp: true,
                 metadata: AppMetadata::default(),
+                preview_version: None,
             },
         ];
 
@@ -193,6 +195,7 @@ mod tests {
                 title: Some("A & <B> \"Q\"".to_string()),
                 ..AppMetadata::default()
             },
+            preview_version: None,
         }];
 
         let html = render_index(&apps, "webby", &IndexChromeContent::default());
@@ -234,6 +237,7 @@ mod tests {
             href: "./alpha/".to_string(),
             tmp: false,
             metadata: AppMetadata::default(),
+            preview_version: None,
         }];
 
         let json = render_card_manifest(&apps);
@@ -241,6 +245,24 @@ mod tests {
         assert!(json.contains("\"id\": \"alpha\""));
         assert!(json.contains("\"href\": \"./alpha/\""));
         assert!(json.contains("\"previewUrl\": \"./webby-previews/alpha.webp\""));
+    }
+
+    #[test]
+    fn card_manifest_versions_preview_urls_when_available() {
+        let apps = vec![AppEntry {
+            name: "alpha".to_string(),
+            is_dir: true,
+            href: "./alpha/".to_string(),
+            tmp: false,
+            metadata: AppMetadata::default(),
+            preview_version: Some("5028e367125f52d4".to_string()),
+        }];
+
+        let json = render_card_manifest(&apps);
+
+        assert!(
+            json.contains("\"previewUrl\": \"./webby-previews/alpha.webp?v=5028e367125f52d4\"")
+        );
     }
 
     #[test]

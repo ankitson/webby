@@ -1,3 +1,23 @@
+## 2026-06-25 — Preview Cache Busting
+
+Goal: prevent host pages from showing stale Webby preview thumbnails after card metadata or app content changes.
+
+Decision:
+- Add content-hash query strings to generated `previewUrl` values when a matching preview image exists.
+- Keep missing preview fallbacks unversioned so old embed data still works.
+- Make `webby preview` recapture stale previews automatically when the staged app source is newer than the existing WebP.
+- Regenerate the bag manifest after `webby preview` so any new image hash is published immediately.
+- Run the same stale-preview refresh automatically from `webby deploy`.
+- Capture the newly staged app automatically from `webby add`, `webby docs`, and `webby pub`.
+- Add `--no-preview` to `add`, `docs`, `pub`, and `deploy` for fast metadata-only runs.
+
+Verification:
+- `cargo fmt --check`
+- `cargo test`
+- `cargo run -- deploy -b internal --no-index`
+- `just install`
+- Live `https://home.ankitson.com/webby/webby-cards.json` shows versioned preview URLs.
+
 ## 2026-06-24 — 0.4.0 Release Prep
 
 Goal: tag and release Webby 0.4.0 while preserving the lesson from the release-notes investigation.

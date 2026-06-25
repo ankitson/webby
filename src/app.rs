@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use crate::config::{Bag, IndexChrome};
 use crate::metadata::{AppMetadata, read_app_metadata};
-use crate::preview::PREVIEW_DIR;
+use crate::preview::{PREVIEW_DIR, preview_version};
 use crate::render::IndexChromeContent;
 use crate::{Result, err};
 
@@ -15,6 +15,7 @@ pub struct AppEntry {
     pub href: String,
     pub tmp: bool,
     pub metadata: AppMetadata,
+    pub preview_version: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -97,6 +98,7 @@ pub fn list_apps(bag: &Bag) -> Result<Vec<AppEntry>> {
                 href: format!("./{file_name}/"),
                 tmp,
                 metadata,
+                preview_version: preview_version(&bag.dir, &file_name),
             });
         } else if file_name.to_lowercase().ends_with(".html") && file_name != "index.html" {
             let name = file_name.trim_end_matches(".html").to_string();
@@ -108,6 +110,7 @@ pub fn list_apps(bag: &Bag) -> Result<Vec<AppEntry>> {
                 href: format!("./{file_name}"),
                 tmp,
                 metadata,
+                preview_version: preview_version(&bag.dir, &name),
             });
         }
     }

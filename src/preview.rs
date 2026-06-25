@@ -2,7 +2,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use crate::app::{AppEntry, list_apps};
 use crate::config::Bag;
@@ -60,8 +60,8 @@ pub fn capture_previews(
     let mut failed = 0usize;
 
     for app in apps {
-        let out = out_dir.join(format!("{}.{}", preview_slug(&app.name), PREVIEW_EXT));
-        if out.exists() && !force {
+        let out = preview_path(&bag.dir, &app.name);
+        if !should_capture_preview(bag, &app, &out, force) {
             skipped += 1;
             println!("skip {} ({})", app.name, out.display());
             continue;
@@ -177,6 +177,84 @@ pub fn preview_slug(value: &str) -> String {
         }
     }
     slug.trim_matches('-').to_string()
+}
+
+pub fn preview_path(bag_dir: &Path, app_name: &str) -> PathBuf {
+    bag_dir
+        .join(PREVIEW_DIR)
+        .join(format!("{}.{}", preview_slug(app_name), PREVIEW_EXT))
+}
+
+pub fn preview_version(bag_dir: &Path, app_name: &str) -> Option<String> {
+    let bytes = fs::read(preview_path(bag_dir, app_name)).ok()?;
+    Some(format!("{:016x}", fnv1a64(&bytes)))
+}
+
+fn fnv1a64(bytes: &[u8]) -> u64 {
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in bytes {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
+}
+
+fn should_capture_preview(bag: &Bag, app: &AppEntry, out: &Path, force: bool) -> bool {
+    if force || !out.exists() {
+        return true;
+    }
+
+    let Some(source_modified) = app_source_modified(bag, app) else {
+        return true;
+    };
+    let Some(preview_modified) = file_modified(out) else {
+        return true;
+    };
+    source_modified > preview_modified
+}
+
+fn app_source_modified(bag: &Bag, app: &AppEntry) -> Option<SystemTime> {
+    let path = if app.is_dir {
+        let rel = app.href.trim_start_matches("./").trim_end_matches('/');
+        bag.dir.join(rel)
+    } else {
+        capture_path(bag, app)
+    };
+    if app.is_dir {
+        max_modified_in_dir(&path)
+    } else {
+        file_modified(&path)
+    }
+}
+
+fn max_modified_in_dir(path: &Path) -> Option<SystemTime> {
+    let mut latest = file_modified(path);
+    let entries = fs::read_dir(path).ok()?;
+    for entry in entries.flatten() {
+        let child = entry.path();
+        let modified = if child.is_dir() {
+            max_modified_in_dir(&child)
+        } else {
+            file_modified(&child)
+        };
+        latest = max_time(latest, modified);
+    }
+    latest
+}
+
+fn max_time(a: Option<SystemTime>, b: Option<SystemTime>) -> Option<SystemTime> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some(a.max(b)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    }
+}
+
+fn file_modified(path: &Path) -> Option<SystemTime> {
+    fs::metadata(path)
+        .and_then(|metadata| metadata.modified())
+        .ok()
 }
 
 fn capture_with_shot_scraper(
