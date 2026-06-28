@@ -1,5 +1,22 @@
 ## 2026-06-28
 
+### README Positioning Pass
+
+#### Goal
+Apply a minimalist-entrepreneur review to make the README pitch Webby well without pretending it is a paid product, company, or broad platform.
+
+#### Decision
+Lead with the real user job: "I already have a static artifact and need it somewhere useful." Add a `Why Webby` section that names the likely community of users: agent prototype builders, homeserver operators, repo docs maintainers, and people with generated reports or scratch tools.
+
+#### Scope
+Keep the pitch honest by saying Webby is deliberately small: no framework, app server, database, build pipeline, auth system, or CMS. The durable promise is static artifact distribution plus cards, previews, and manifests.
+
+#### Verification
+- `git diff --check`
+- `just docs-deploy`
+- `curl -fsS -I https://home.ankitson.com/webby/tmp-webby-docs/README/`
+- `curl -fsS https://home.ankitson.com/webby/tmp-webby-docs/README/ | rg -n 'Why Webby|static thing|No framework|deliberately small|remaining problem is distribution'`
+
 ### Cloudflare Pages Bag Rename
 
 #### Goal

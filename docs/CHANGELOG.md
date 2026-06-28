@@ -1,5 +1,15 @@
 ## 2026-06-28
 
+### README Positioning Pass
+
+Modified:
+- Tightened the README opening around the concrete user job: turning an existing static artifact into a reachable URL with cards, screenshots, and reusable card data.
+- Added a `Why Webby` section that explains the intended audience and the deliberate static-file constraint.
+- Reframed use cases around distribution after the artifact already exists, rather than broad product positioning.
+
+Why:
+- Webby is not a paid product or platform; the docs should pitch it clearly as a small, useful publishing tool without overselling it.
+
 ### Cloudflare Pages Bag Rename
 
 Added:

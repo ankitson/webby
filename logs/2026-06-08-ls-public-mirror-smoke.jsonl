@@ -1,4 +1,0 @@
-{"command":"INTERNAL_DIR=/tmp/webby-ls-fix/internal PUBLIC_DIR=/tmp/webby-ls-fix/public INTERNAL_URL=http://internal.example PUBLIC_URL=http://public.example CF_ACCOUNT_ID=dummy CF_TOKEN_REF=dummy bun run src/cli.ts ls","status":"pass","summary":"listed both local-only/ and public-only/ when internal started without public symlinks"}
-{"command":"INTERNAL_DIR=/tmp/webby-ls-prune/internal PUBLIC_DIR=/tmp/webby-ls-prune/public INTERNAL_URL=http://internal.example PUBLIC_URL=http://public.example CF_ACCOUNT_ID=dummy CF_TOKEN_REF=dummy bun run src/cli.ts ls","status":"pass","summary":"removed stale public symlink and listed current/ only"}
-{"command":"bun run src/cli.ts ls","status":"pass","summary":"real internal bag lists internal apps plus mirrored public apps"}
-{"command":"bun run src/cli.ts ls --public","status":"pass","summary":"public bag listing still works independently"}
