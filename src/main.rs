@@ -14,7 +14,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::app::{app_url, generate_index, list_apps, remove_app, stage_app};
-use crate::config::{Config, Host, sample_config};
+use crate::config::{CF_PAGES_BAG, Config, Host, LEGACY_PUBLIC_BAG, sample_config};
 use crate::docs::{DocsOptions, build_docs_app};
 use crate::metadata::{MetadataOverrides, apply_app_metadata_overrides};
 use crate::preview::{capture_preview_url, capture_previews};
@@ -49,7 +49,8 @@ pub fn err(message: impl Into<String>) -> WebbyError {
 
 #[derive(Parser)]
 #[command(name = "webby")]
-#[command(about = "Drop a static HTML app into a local, tailnet, or public URL.")]
+#[command(about = "Publish a static site or docs directory from your terminal.")]
+#[command(after_help = "Quickstart:\n  webby add ./site.html -b local\n  webby serve -b local")]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]
@@ -58,20 +59,30 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Stage a .html file or folder with index.html into a bag.
+    /// Stage an HTML file or folder into a bag.
     Add {
+        /// .html file or folder to copy into the bag.
         path: PathBuf,
-        #[arg(short = 'b', long = "bag")]
+        #[arg(
+            short = 'b',
+            long = "bag",
+            value_name = "BAG",
+            help = "Bag to stage into"
+        )]
         bag: Option<String>,
-        #[arg(long)]
+        #[arg(
+            long,
+            value_name = "NAME",
+            help = "Use this app name instead of the source file or folder name"
+        )]
         name: Option<String>,
-        #[arg(long)]
+        #[arg(long, help = "Prefix the staged name with tmp- when needed")]
         tmp: bool,
         /// Set the generated card title in the staged app metadata.
-        #[arg(long)]
+        #[arg(long, value_name = "TITLE")]
         title: Option<String>,
         /// Set the generated card description in the staged app metadata.
-        #[arg(long)]
+        #[arg(long, value_name = "TEXT")]
         description: Option<String>,
         /// Set an app metadata property as KEY=VALUE. Can be repeated.
         #[arg(long = "property", value_name = "KEY=VALUE")]
@@ -83,20 +94,30 @@ enum Command {
         #[arg(long)]
         no_preview: bool,
     },
-    /// Generate and stage a static docs app from a Markdown directory.
+    /// Publish a Markdown directory as a static docs app.
     Docs {
+        /// Directory of Markdown files to render.
         path: PathBuf,
-        #[arg(short = 'b', long = "bag")]
+        #[arg(
+            short = 'b',
+            long = "bag",
+            value_name = "BAG",
+            help = "Bag to stage into"
+        )]
         bag: Option<String>,
-        #[arg(long)]
+        #[arg(
+            long,
+            value_name = "NAME",
+            help = "Use this app name instead of the source directory name"
+        )]
         name: Option<String>,
-        #[arg(long)]
+        #[arg(long, help = "Prefix the staged docs app name with tmp- when needed")]
         tmp: bool,
         /// Set the generated docs card/site title.
-        #[arg(long)]
+        #[arg(long, value_name = "TITLE")]
         title: Option<String>,
         /// Set the generated docs card/site description.
-        #[arg(long)]
+        #[arg(long, value_name = "TEXT")]
         description: Option<String>,
         /// Set an app metadata property as KEY=VALUE. Can be repeated.
         #[arg(long = "property", value_name = "KEY=VALUE")]
@@ -114,34 +135,48 @@ enum Command {
         #[arg(long)]
         no_preview: bool,
     },
-    /// Stage into the public bag and deploy it.
+    /// Stage into the cf-pages bag and deploy now.
     Pub {
+        /// .html file or folder to publish through the cf-pages bag.
         path: PathBuf,
-        #[arg(long)]
+        #[arg(
+            long,
+            value_name = "NAME",
+            help = "Use this app name instead of the source file or folder name"
+        )]
         name: Option<String>,
-        #[arg(long)]
+        #[arg(long, help = "Prefix the staged name with tmp- when needed")]
         tmp: bool,
         /// Set the generated card title in the staged app metadata.
-        #[arg(long)]
+        #[arg(long, value_name = "TITLE")]
         title: Option<String>,
         /// Set the generated card description in the staged app metadata.
-        #[arg(long)]
+        #[arg(long, value_name = "TEXT")]
         description: Option<String>,
         /// Set an app metadata property as KEY=VALUE. Can be repeated.
         #[arg(long = "property", value_name = "KEY=VALUE")]
         properties: Vec<String>,
-        /// Do not write the public bag root index.html for this publish.
+        /// Do not write the cf-pages bag root index.html for this publish.
         #[arg(long)]
         no_index: bool,
         /// Do not capture or refresh preview images before publishing.
         #[arg(long)]
         no_preview: bool,
     },
-    /// Deploy or activate a bag.
+    /// Publish, activate, or refresh a bag.
     Deploy {
-        #[arg(short = 'b', long = "bag")]
+        #[arg(
+            short = 'b',
+            long = "bag",
+            value_name = "BAG",
+            help = "Bag to publish or activate"
+        )]
         bag: String,
-        #[arg(long)]
+        #[arg(
+            long,
+            value_name = "PORT",
+            help = "Override the local provider port for this run"
+        )]
         port: Option<u16>,
         /// Do not write the bag root index.html for this deploy.
         #[arg(long)]
@@ -152,9 +187,9 @@ enum Command {
     },
     /// Serve a bag on localhost.
     Serve {
-        #[arg(short = 'b', long = "bag")]
+        #[arg(short = 'b', long = "bag", value_name = "BAG", help = "Bag to serve")]
         bag: Option<String>,
-        #[arg(long)]
+        #[arg(long, value_name = "PORT", help = "Port to bind on 127.0.0.1")]
         port: Option<u16>,
         /// Do not write the bag root index.html before serving.
         #[arg(long)]
@@ -162,60 +197,91 @@ enum Command {
     },
     /// List all bags, or one selected bag.
     Ls {
-        #[arg(short = 'b', long = "bag")]
+        #[arg(
+            short = 'b',
+            long = "bag",
+            value_name = "BAG",
+            help = "Only list one bag"
+        )]
         bag: Option<String>,
     },
     /// Remove an app from a bag.
     Rm {
+        /// App name, with or without .html or trailing slash.
         name: String,
-        #[arg(short = 'b', long = "bag")]
+        #[arg(
+            short = 'b',
+            long = "bag",
+            value_name = "BAG",
+            help = "Bag to remove from"
+        )]
         bag: Option<String>,
     },
     /// Print and open an app URL.
     Open {
+        /// App name, with or without .html or trailing slash.
         name: String,
-        #[arg(short = 'b', long = "bag")]
+        #[arg(
+            short = 'b',
+            long = "bag",
+            value_name = "BAG",
+            help = "Bag that contains the app"
+        )]
         bag: Option<String>,
     },
     /// Attach a custom domain to a Cloudflare Pages bag.
     Domain {
+        /// Hostname to attach to the Pages project.
         hostname: String,
-        #[arg(short = 'b', long = "bag")]
+        #[arg(
+            short = 'b',
+            long = "bag",
+            value_name = "BAG",
+            help = "Cloudflare Pages bag"
+        )]
         bag: String,
     },
-    /// Print configured bags and paths.
+    /// Print bag paths and provider URLs.
     Where,
     /// Write a starter config file.
     Init {
-        #[arg(long)]
+        #[arg(long, help = "Overwrite an existing config file")]
         force: bool,
     },
     /// Capture static screenshot previews for a bag.
     Preview {
         /// Optional app name to preview instead of the whole bag.
         app: Option<String>,
-        #[arg(short = 'b', long = "bag")]
+        #[arg(short = 'b', long = "bag", value_name = "BAG", help = "Bag to preview")]
         bag: Option<String>,
-        #[arg(long)]
+        #[arg(long, help = "Recapture previews even when they look fresh")]
         force: bool,
-        #[arg(long, default_value_t = DEFAULT_PREVIEW_WIDTH)]
+        /// Capture viewport width in pixels.
+        #[arg(long, value_name = "PX", default_value_t = DEFAULT_PREVIEW_WIDTH)]
         width: u32,
-        #[arg(long, default_value_t = DEFAULT_PREVIEW_HEIGHT)]
+        /// Capture viewport height in pixels.
+        #[arg(long, value_name = "PX", default_value_t = DEFAULT_PREVIEW_HEIGHT)]
         height: u32,
-        #[arg(long, default_value_t = DEFAULT_PREVIEW_TIMEOUT_SECS)]
+        /// Maximum capture time per page.
+        #[arg(long, value_name = "SECONDS", default_value_t = DEFAULT_PREVIEW_TIMEOUT_SECS)]
         timeout_secs: u64,
     },
     /// Capture one URL or file path as an optimized WebP preview.
     PreviewUrl {
+        /// URL or local file path to capture.
         url: String,
+        /// Output path. Must end in .webp.
         output: PathBuf,
-        #[arg(long)]
+        #[arg(long, help = "Overwrite an existing output file")]
         force: bool,
-        #[arg(long, default_value_t = DEFAULT_PREVIEW_WIDTH)]
+        /// Capture viewport width in pixels.
+        #[arg(long, value_name = "PX", default_value_t = DEFAULT_PREVIEW_WIDTH)]
         width: u32,
-        #[arg(long, default_value_t = DEFAULT_PREVIEW_HEIGHT)]
+        /// Capture viewport height in pixels.
+        #[arg(long, value_name = "PX", default_value_t = DEFAULT_PREVIEW_HEIGHT)]
         height: u32,
-        #[arg(long, default_value_t = DEFAULT_PREVIEW_TIMEOUT_SECS)]
+        /// Maximum capture time.
+        #[arg(long, value_name = "SECONDS", default_value_t = DEFAULT_PREVIEW_TIMEOUT_SECS)]
         timeout_secs: u64,
     },
 }
@@ -433,7 +499,7 @@ fn cmd_pub(
     no_index: bool,
     no_preview: bool,
 ) -> Result<()> {
-    let bag = with_no_index(cfg.bag("public")?, no_index);
+    let bag = with_no_index(select_pub_bag(cfg)?, no_index);
     let staged = stage_app(&path, &bag, name, tmp)?;
     apply_app_metadata_overrides(
         &staged_app_path(&bag, &staged.name, staged.is_dir),
@@ -441,8 +507,16 @@ fn cmd_pub(
         &metadata,
     )?;
     refresh_previews_and_index(&bag, Some(&staged.name), no_preview)?;
-    println!("✓ {} → public bag", staged.name);
+    println!("✓ {} → {} bag", staged.name, bag.label);
     deploy_bag(&bag, None)
+}
+
+fn select_pub_bag(cfg: &Config) -> Result<&config::Bag> {
+    cfg.bags
+        .iter()
+        .find(|bag| bag.label == LEGACY_PUBLIC_BAG)
+        .map(Ok)
+        .unwrap_or_else(|| cfg.bag(CF_PAGES_BAG))
 }
 
 fn cmd_docs(

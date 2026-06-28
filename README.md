@@ -1,10 +1,25 @@
-# webby
+<h1 align="center">webby</h1>
 
-Drop a static HTML app into a bag and get a URL.
+<p align="center">
+  Publish a static site in one command.
+</p>
 
-webby is for tiny tools, one-off dashboards, agent-made prototypes, and
-standalone HTML files. It works with no config on localhost, and can also
-activate tailnet, temporary public, durable public, or custom hosting.
+<p align="center">
+  <a href="https://crates.io/crates/webby-deploy"><img alt="Crates.io" src="https://img.shields.io/crates/v/webby-deploy"></a>
+  <a href="https://github.com/ankitson/webby"><img alt="Rust" src="https://img.shields.io/badge/rust-2024-orange"></a>
+  <a href="Cargo.toml"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
+</p>
+
+Webby turns files on disk into a shareable URL.
+
+It is built for one-off HTML tools, agent-made prototypes, small dashboards,
+repo docs, and personal/internal launchers. Give Webby an HTML file, a folder
+with `index.html`, or a directory of Markdown files; it copies the result into
+a named **bag**, writes the index/card data around it, and serves or publishes
+that bag through a provider.
+
+No config is required for local preview. Add Tailscale, Cloudflare Pages, Caddy,
+or a custom command provider when you need wider reach.
 
 ## Install
 
@@ -12,74 +27,151 @@ activate tailnet, temporary public, durable public, or custom hosting.
 cargo install webby-deploy
 ```
 
-## Start Fast
+The installed binary is named `webby`.
 
-No config required:
+From a checkout:
 
 ```sh
-webby add ./clock.html
-webby serve
+cargo install --path .
 ```
 
-That stages `clock.html` in the `local` bag and serves the bag at
-`http://localhost:8765`.
+## Quickstart
 
-## Commands
-
-A bag is a named directory plus a hosting provider. Apps are copied into a bag,
-then the provider decides how that directory gets a URL.
+Preview an existing HTML file locally:
 
 ```sh
-webby add <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [--no-preview] [-b BAG]
-webby docs <dir> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [--no-preview] [-b BAG]
-webby pub <path> [--name N] [--tmp] [--title T] [--description D] [--property K=V] [--no-preview]
-webby deploy -b BAG [--no-preview]
-webby preview [APP] -b BAG [--force]
-webby serve [-b BAG] [--port N]
-webby ls [-b BAG]
-webby rm <name> [-b BAG]
-webby open <name> [-b BAG]
-webby domain <hostname> -b BAG
+webby add ./site.html -b local
+webby serve -b local
+```
+
+Open `http://localhost:8765/site.html`.
+
+Preview a built static site folder:
+
+```sh
+webby add ./dist -b local --name my-site
+webby serve -b local
+```
+
+Folders should contain `index.html`; Webby serves that folder at
+`http://localhost:8765/my-site/`.
+
+## Preview
+
+Webby pages are plain static pages: a generated cards index, optimized previews,
+and a reusable card manifest beside it.
+
+| Homeserver-style bag | Docs and apps together |
+| --- | --- |
+| ![A Webby generated cards page for a homeserver with docs, dashboards, apps, and temporary prototypes.](docs/assets/webby-homeserver-cards.webp) | ![A Webby generated cards page at a medium viewport with docs and apps in one static launcher.](docs/assets/webby-docs-and-apps-grid.webp) |
+
+## The Mental Model
+
+**Apps** are static artifacts: either one `.html` file, a folder with
+`index.html`, or a generated docs app from Markdown.
+
+**Bags** are staging directories with a hosting provider attached. The built-in
+bags cover local preview, private Tailscale, temporary public Funnel,
+Cloudflare Pages, and optional Caddy/internal hosting.
+
+**Deploying** a bag regenerates its static index and card manifest, refreshes
+missing or stale preview images, then asks the provider to make the bag
+available at its URL.
+
+Most usage is just:
+
+```sh
+webby add <file-or-folder> -b <bag>
+webby deploy -b <bag>
+```
+
+For the `local` bag, use `webby serve` instead of `deploy`.
+
+## Use Cases
+
+Use Webby when you have a static artifact and want the boring publishing parts
+handled for you:
+
+- **Local preview:** stage a generated HTML report or prototype, then inspect it
+  at `localhost` without setting up a project-specific server.
+- **Homeserver launcher:** keep small dashboards, one-off tools, and repo docs
+  in one internal bag with screenshots and a generated index.
+- **Repo docs hub:** run `webby docs ./docs -b internal` from any repo and get a
+  navigable static docs app next to your tools.
+- **Temporary public demo:** push a folder through Tailscale Funnel when you
+  need a short-lived public URL from the current machine.
+- **Durable public mini-site:** publish the same static artifact through
+  Cloudflare Pages with `webby pub`.
+
+Embedding Webby means another page owns the homepage while Webby owns the app
+inventory. Run with `--no-index`; Webby still writes `webby-cards.json`,
+`webby-card-grid.js`, and `webby-previews/`, but removes its generated root
+`index.html`. Your homepage can then render those cards in its own navigation,
+theme, auth boundary, or layout.
+
+## 1. Local Preview
+
+Local preview is the safest path and needs no config:
+
+```sh
+webby add ./clock.html -b local
+webby serve -b local
+```
+
+Useful local commands:
+
+```sh
+webby ls -b local
+webby open clock -b local
+webby rm clock -b local
 webby where
-webby init
 ```
 
-`webby ls` lists all bags by default. Use `-b` / `--bag` to select one bag.
+`webby ls` lists every configured bag when you omit `-b`.
 
-An app is a folder with `index.html` or a standalone `.html` file. Names that
-start with `tmp` are shown under the Temp section in generated indexes.
+## 2. Markdown Docs
 
-Card previews live in `webby-previews/` as optimized WebP images. `webby add`,
-`webby docs`, and `webby pub` capture the newly staged app by default. `webby
-deploy -b BAG` refreshes missing or stale previews before publishing card data;
-a preview is stale when the staged app source is newer than the existing image.
-Pass `--no-preview` to skip automatic capture on those commands.
+Publish a Markdown directory as a static docs app:
 
-`webby preview -b BAG` runs the same capture pipeline explicitly. It shells out
-to `uvx shot-scraper` for capture and `uvx --with pillow python` for resizing
-and conversion, skips fresh previews, and can refresh one app with a command
-like `webby preview jobsearch-docs -b internal --force`. Generated preview URLs
-include a content hash query string when the image exists, so hosts can cache
-preview images aggressively while revalidating `webby-cards.json`.
+```sh
+webby docs ./docs -b local \
+  --name project-docs \
+  --title "Project Docs" \
+  --property category=Documents
 
-`webby preview-url URL output.webp` uses the same capture and WebP optimization
-pipeline for pages that are not staged in a Webby bag, such as a host homepage
-that wants service-card previews.
+webby serve -b local
+```
 
-Every deploy writes `webby-cards.json` next to the generated assets. That JSON
-contains the same card data used by Webby's index component, so another page can
-embed a Webby bag without scraping a directory listing.
+Webby scans Markdown files within `--depth` directories below the source root
+(default `3`), renders them with a sidebar, rewrites in-root `.md` links to the
+generated `.html` pages, and copies linked in-root assets up to
+`--max-asset-size-mib` MiB each (default `25`).
 
-Generated bag indexes render their card grid as static HTML. The browser can
-lay out cards and discover preview image URLs during the initial document parse;
-`webby-card-grid.js` is still emitted for pages that want to embed a reusable
-custom element, but the default index does not need that JavaScript to show its
-primary content.
+If the directory has `index.md`, it becomes the docs homepage. Otherwise Webby
+writes a generated homepage that links to the discovered pages. Optional YAML
+frontmatter can set page `title`, `description`, `tags`, `type`, `resource`,
+and `timestamp`.
 
-## App Metadata
+## 3. Card Metadata And Previews
 
-Apps can carry their own card metadata. For a standalone app, put it in the
-`.html` file. For a folder app, put it in `index.html`.
+Every generated bag includes:
+
+- `index.html`: a static launcher page, unless disabled.
+- `webby-cards.json`: normalized card data for every staged app.
+- `webby-card-grid.js`: a reusable card-grid custom element for host pages.
+- `webby-previews/*.webp`: optimized screenshots when preview capture succeeds.
+
+Set card metadata while staging:
+
+```sh
+webby add ./network-audit.html -b internal \
+  --title "Network Audit" \
+  --description "Internal network and DNS audit notes." \
+  --property category=Documents \
+  --property kind=report
+```
+
+Or put metadata in the app itself:
 
 ```html
 <script type="application/webby+json">
@@ -94,71 +186,36 @@ Apps can carry their own card metadata. For a standalone app, put it in the
 </script>
 ```
 
-`title` and `description` customize the generated card. If they are omitted,
-Webby falls back to the page's `<title>` and `<meta name="description">` when
-available.
+For standalone apps, put that block in the `.html` file. For folder apps, put
+it in `index.html`. If Webby metadata is absent, Webby falls back to the page
+`<title>` and `<meta name="description">`.
 
-`properties` is an app-defined key/value object. Webby copies it into
-`webby-cards.json` without assigning meaning to the keys. Host pages can use
-those properties however they want, for example grouping by
-`properties.category`.
-
-For compatibility with older card consumers, a string `properties.category`
-also appears as the generated card's top-level `category` field.
-
-You can also set metadata while staging an app. Webby writes the metadata into
-the staged HTML app and then regenerates card data from that self-contained
-artifact:
+Preview capture runs automatically on `add`, `docs`, `pub`, and `deploy`.
+Pass `--no-preview` when you only want to refresh metadata/index files. Run an
+explicit refresh with:
 
 ```sh
-webby add ./network-audit.html -b internal \
-  --title "Network Audit" \
-  --description "Internal network and DNS audit notes." \
-  --property category=Documents \
-  --property kind=report
+webby preview -b internal
+webby preview project-docs -b internal --force
 ```
 
-## Markdown Docs
+Preview capture uses `uvx shot-scraper` plus Pillow. Generated preview URLs get
+a content hash query string when the image exists, so hosts can cache preview
+images aggressively while still picking up changed thumbnails.
 
-Point Webby at a directory of Markdown files to generate a static docs app and
-stage it into any bag:
-
-```sh
-webby docs ./docs -b internal \
-  --name project-docs \
-  --title "Project Docs" \
-  --property category=Documents
-```
-
-Webby scans Markdown files within `--depth` directories below the source root
-(default `3`), renders them with a sidebar, copies linked in-root assets up to
-`--max-asset-size-mib` MiB each (default `25`), rewrites in-root `.md` links to
-generated `.html` pages, and then regenerates the bag index/card manifest.
-
-Markdown frontmatter is optional and permissive. `title` and `description`
-control page display; OKF-style fields such as `type`, `resource`, `tags`, and
-`timestamp` are shown when present. Unknown fields are tolerated.
-
-If the directory has an `index.md`, that becomes the docs app homepage. If not,
-Webby writes a generated homepage that links to the discovered pages. Raw HTML
-inside Markdown is escaped by default. Links outside the selected root are left
-unchanged and are not copied into the generated app.
-
-## Provider Examples
+## 4. Private Or Public Publishing
 
 Built-in bags:
 
-| bag | provider | reach |
-| --- | --- | --- |
-| `local` | `local` | localhost preview |
-| `tailnet` | `tailscale-serve` | private Tailscale HTTPS |
-| `funnel` | `tailscale-funnel` | temporary public HTTPS |
-| `public` | `cloudflare-pages` | durable public HTTPS |
+| Bag | Provider | Use it for | Command |
+| --- | --- | --- | --- |
+| `local` | Local HTTP server | Safe preview on your machine | `webby serve -b local` |
+| `tailnet` | Tailscale Serve | Private HTTPS on your tailnet | `webby deploy -b tailnet` |
+| `funnel` | Tailscale Funnel | Temporary public HTTPS from this machine | `webby deploy -b funnel` |
+| `cf-pages` | Cloudflare Pages | Durable public HTTPS | `webby pub <path>` or `webby deploy -b cf-pages` |
+| `internal` | Caddy compatibility | Existing internal static host | Added when `INTERNAL_URL` or `INTERNAL_DIR` is set |
 
-If `INTERNAL_URL` or `INTERNAL_DIR` is set, webby also adds an `internal` Caddy
-compatibility bag.
-
-Tailnet:
+Private Tailscale:
 
 ```sh
 webby add ./dashboard -b tailnet
@@ -172,106 +229,110 @@ webby add ./demo -b funnel
 webby deploy -b funnel
 ```
 
-Durable public Cloudflare Pages:
+Cloudflare Pages:
 
 ```sh
 export CLOUDFLARE_ACCOUNT_ID=...
 export CLOUDFLARE_API_TOKEN=...
-webby pub ./lissajous --name lissajous
+
+webby pub ./landing-page --name landing-page
 ```
 
-## Configuration
+`webby pub` is shorthand for staging into the `cf-pages` bag and deploying it.
+For legacy configs, an explicit `public` bag still wins; otherwise the old
+`public` name is accepted as a compatibility alias for `cf-pages`.
 
-Run:
+## 5. Embedding Webby In A Larger Site
+
+Sometimes Webby should manage apps and card data, while another site owns the
+homepage. Use `--no-index` for that:
+
+```sh
+webby add ./tool.html -b internal --no-index
+webby deploy -b internal --no-index
+```
+
+That keeps `webby-cards.json`, `webby-card-grid.js`, and previews, but removes
+the generated root `index.html`.
+
+Host pages can consume `webby-cards.json` directly or use the emitted custom
+element:
+
+```html
+<script type="module" src="/webby/webby-card-grid.js"></script>
+<webby-card-grid src="/webby/webby-cards.json" group-by-property="category"></webby-card-grid>
+```
+
+For a generated Webby index that still needs shared site chrome, set
+`indexChromeDir` in the bag config. Webby will inline optional `head.html` and
+`body.html` fragments from that directory.
+
+## 6. Configuration
+
+Start with:
 
 ```sh
 webby init
 ```
 
-This writes `~/.config/webby/config.json`. Override the config path with
-`WEBBY_CONFIG`, and the default bag storage root with `WEBBY_DATA_DIR`.
+This writes `~/.config/webby/config.json`. Override paths with:
 
-Example:
+- `WEBBY_CONFIG`: config file path.
+- `WEBBY_DATA_DIR`: default storage root for built-in bags.
+- `WEBBY_DEFAULT_BAG`: default bag label.
+- `WEBBY_ENV`: optional `KEY=VALUE` env file to load before config.
+
+Minimal custom bag example:
 
 ```json
 {
   "defaultBag": "local",
   "bags": {
-    "local": {
-      "dir": "~/.local/share/webby/local",
-      "host": { "type": "local", "port": 8765 }
-    },
-    "tailnet": {
-      "dir": "~/.local/share/webby/tailnet",
-      "host": { "type": "tailscale-serve", "path": "/", "background": true }
-    },
-    "funnel": {
-      "dir": "~/.local/share/webby/funnel",
-      "host": { "type": "tailscale-funnel", "path": "/", "background": true }
-    },
-    "public": {
-      "dir": "~/.local/share/webby/public",
+    "tools": {
+      "dir": "~/Sites/tools",
       "host": {
-        "type": "cloudflare-pages",
-        "project": "webby",
-        "tokenEnv": "CLOUDFLARE_API_TOKEN"
+        "type": "command",
+        "url": "https://tools.example.com",
+        "deploy": "rsync -a {dir}/ deploy@example.com:/var/www/tools/"
       }
-    },
-    "homepage-tools": {
-      "dir": "~/.local/share/webby/tools",
-      "noIndex": true,
-      "host": { "type": "caddy", "url": "https://example.test/webby/" }
     }
   }
 }
 ```
 
-webby can also load a KEY=VALUE env file from `WEBBY_ENV`; when running from a
-checkout, a local `.env.secret` file is loaded if present.
+Command providers can use `{dir}`, `{label}`, and `{url}` in `deploy`,
+`afterAdd`, and `open` templates.
 
-## Provider Notes
-
-`local` generates an index and can be served with `webby serve`.
-
-Webby always writes `webby-cards.json` and `webby-card-grid.js`. By default it
-also writes a standalone static `index.html` for the bag root.
-
-Set `noIndex: true` on a bag, or pass `--no-index` to `add`, `pub`, `deploy`,
-or `serve`, when a larger site consumes the card data and the bag should not
-publish its own root index page. Pass `--no-preview` to `add`, `docs`, `pub`, or
-`deploy` when you only want card data regenerated and do not want screenshot
-capture to run.
-
-Set `indexChromeDir` on a bag to inline optional `head.html` and `body.html`
-fragments into the generated root index. This is intended for host-site chrome
-such as a shared header while keeping webby itself generic:
-
-```json
-{
-  "bags": {
-    "public": {
-      "dir": "~/.local/share/webby/public",
-      "indexChromeDir": "~/site-chrome/dist",
-      "host": { "type": "cloudflare-pages", "project": "webby" }
-    }
-  }
-}
-```
-
-Use `WEBBY_INDEX_CHROME_DIR` to apply the same chrome directory to every bag.
-
-Caddy-hosted bags do not get a special listing mode. They can either expose the
-normal generated Webby index, or set `noIndex` when another homepage owns the
-root experience.
-
-`tailscale-serve` and `tailscale-funnel` call the `tailscale` CLI with the bag
-directory as the target.
-
-`cloudflare-pages` calls:
+## Command Reference
 
 ```sh
-wrangler pages deploy <dir> --project-name <project> --branch <branch> --commit-dirty=true
+webby add <path> [-b bag] [--name name] [--tmp] [--title T] [--description D] [--property K=V] [--no-index] [--no-preview]
+webby docs <dir> [-b bag] [--name name] [--title T] [--description D] [--property K=V] [--depth N] [--max-asset-size-mib N] [--no-index] [--no-preview]
+webby pub <path> [--name name] [--tmp] [--title T] [--description D] [--property K=V] [--no-index] [--no-preview]
+webby deploy -b bag [--port N] [--no-index] [--no-preview]
+webby serve [-b bag] [--port N] [--no-index]
+webby preview [app] -b bag [--force] [--width PX] [--height PX] [--timeout-secs N]
+webby preview-url <url-or-file> <output.webp> [--force] [--width PX] [--height PX] [--timeout-secs N]
+webby ls [-b bag]
+webby open <name> [-b bag]
+webby rm <name> [-b bag]
+webby domain <hostname> -b cf-pages
+webby where
+webby init [--force]
 ```
 
-`command` providers run a shell command template. `{dir}`, `{label}`, and
-`{url}` are expanded before execution.
+Run `webby <command> --help` for exact option descriptions.
+
+## Development
+
+```sh
+just check
+just install
+```
+
+Maintainers can publish this repository's docs through the shared docme/Webby
+workflow:
+
+```sh
+just docs-deploy
+```

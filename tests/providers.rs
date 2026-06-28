@@ -701,6 +701,118 @@ fn add_directory_skips_local_metadata_dirs() {
 }
 
 #[test]
+fn legacy_public_bag_alias_resolves_to_cf_pages_builtin() {
+    let tmp = TestDir::new("public-alias");
+    let config = write_config(
+        tmp.path(),
+        r#"{
+          "defaultBag": "local"
+        }"#,
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args(["ls", "-b", "public"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stdout).contains("(cf-pages bag is empty)"));
+
+    let where_out = webby(tmp.path(), &config).args(["where"]).output().unwrap();
+    assert!(
+        where_out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&where_out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&where_out.stdout);
+    assert!(stdout.contains("cf-pages"));
+    assert!(!stdout.contains("  public "));
+}
+
+#[test]
+fn pub_uses_cf_pages_bag_by_default() {
+    let tmp = TestDir::new("pub-cf-pages");
+    let source = tmp.path().join("source");
+    write_named_app(&source, "app");
+    let cf_pages = tmp.path().join("cf-pages");
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "bags": {{
+                "cf-pages": {{
+                  "dir": "{}",
+                  "host": {{ "type": "local", "port": 7777 }}
+                }}
+              }}
+            }}"#,
+            cf_pages.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args([
+            "pub",
+            source.join("app").to_str().unwrap(),
+            "--name",
+            "published",
+            "--no-preview",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(cf_pages.join("published").join("index.html").exists());
+    assert!(String::from_utf8_lossy(&out.stdout).contains("published → cf-pages bag"));
+}
+
+#[test]
+fn pub_preserves_explicit_legacy_public_bag() {
+    let tmp = TestDir::new("pub-public-legacy");
+    let source = tmp.path().join("source");
+    write_named_app(&source, "app");
+    let public = tmp.path().join("public");
+    let config = write_config(
+        tmp.path(),
+        &format!(
+            r#"{{
+              "bags": {{
+                "public": {{
+                  "dir": "{}",
+                  "host": {{ "type": "local", "port": 7777 }}
+                }}
+              }}
+            }}"#,
+            public.display()
+        ),
+    );
+
+    let out = webby(tmp.path(), &config)
+        .args([
+            "pub",
+            source.join("app").to_str().unwrap(),
+            "--name",
+            "published",
+            "--no-preview",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(public.join("published").join("index.html").exists());
+    assert!(String::from_utf8_lossy(&out.stdout).contains("published → public bag"));
+}
+
+#[test]
 fn preview_uses_shot_scraper_via_uvx() {
     let tmp = TestDir::new("preview");
     let bin_dir = tmp.path().join("bin");
@@ -1094,14 +1206,14 @@ exit 0
 "#,
     );
 
-    let public = tmp.path().join("public");
-    write_app(&public);
+    let cf_pages = tmp.path().join("cf-pages");
+    write_app(&cf_pages);
     let config = write_config(
         tmp.path(),
         &format!(
             r#"{{
               "bags": {{
-                "public": {{
+                "cf-pages": {{
                   "dir": "{}",
                   "host": {{
                     "type": "cloudflare-pages",
@@ -1114,7 +1226,7 @@ exit 0
                 }}
               }}
             }}"#,
-            public.display()
+            cf_pages.display()
         ),
     );
 
@@ -1127,7 +1239,7 @@ exit 0
         .env("PATH", path)
         .env("WEBBY_CAPTURE", &capture)
         .env("WEBBY_TEST_CF_TOKEN", "secret-token")
-        .args(["deploy", "-b", "public", "--no-preview"])
+        .args(["deploy", "-b", "cf-pages", "--no-preview"])
         .output()
         .unwrap();
     assert!(
@@ -1135,12 +1247,12 @@ exit 0
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    assert!(public.join("index.html").exists());
+    assert!(cf_pages.join("index.html").exists());
 
     let log = fs::read_to_string(capture).unwrap();
     assert!(log.contains(&format!(
         "wrangler pages deploy {} --project-name mini --branch preview --commit-dirty=true",
-        public.display()
+        cf_pages.display()
     )));
     assert!(log.contains("account=acct_123 token=secret-token"));
 }
@@ -1160,14 +1272,14 @@ exit 0
 "#,
     );
 
-    let public = tmp.path().join("public");
-    write_app(&public);
+    let cf_pages = tmp.path().join("cf-pages");
+    write_app(&cf_pages);
     let config = write_config(
         tmp.path(),
         &format!(
             r#"{{
               "bags": {{
-                "public": {{
+                "cf-pages": {{
                   "dir": "{}",
                   "host": {{
                     "type": "cloudflare-pages",
@@ -1178,7 +1290,7 @@ exit 0
                 }}
               }}
             }}"#,
-            public.display()
+            cf_pages.display()
         ),
     );
 
@@ -1186,7 +1298,7 @@ exit 0
         .env("PATH", bin_dir)
         .env("WEBBY_CAPTURE", &capture)
         .env("WEBBY_TEST_CF_TOKEN", "secret-token")
-        .args(["deploy", "-b", "public", "--no-preview"])
+        .args(["deploy", "-b", "cf-pages", "--no-preview"])
         .output()
         .unwrap();
     assert!(
@@ -1194,12 +1306,12 @@ exit 0
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    assert!(public.join("index.html").exists());
+    assert!(cf_pages.join("index.html").exists());
 
     let log = fs::read_to_string(capture).unwrap();
     assert!(log.contains(&format!(
         "npx --yes wrangler pages deploy {} --project-name mini --branch main --commit-dirty=true",
-        public.display()
+        cf_pages.display()
     )));
 }
 

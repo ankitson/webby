@@ -14,6 +14,18 @@ check:
     cargo check
     cargo test
 
+# Build the docs site with the global docme workflow.
+docs-build:
+    just -g docs-build
+
+# Build docs and stage them into Webby's internal bag.
+docs-deploy:
+    WEBBY_DOCS_NAME=tmp-webby-docs just -g docs-deploy
+
+# Regenerate README preview screenshots from a temporary Webby bag.
+readme-previews:
+    python3 scripts/generate-readme-previews.py
+
 # Run webby from this checkout. Pass CLI args after the recipe name.
 run *args:
     cargo run -- {{args}}
@@ -22,11 +34,11 @@ run *args:
 add path *flags:
     cargo run -- add {{path}} {{flags}}
 
-# Add to the public bag and deploy to Cloudflare Pages.
+# Add to the cf-pages bag and deploy to Cloudflare Pages.
 pub path *flags:
     cargo run -- pub {{path}} {{flags}}
 
-# Activate/deploy a bag. Pass flags after the recipe name, e.g. `-b public`.
+# Activate/deploy a bag. Pass flags after the recipe name, e.g. `-b cf-pages`.
 deploy *flags:
     cargo run -- deploy {{flags}}
 
@@ -38,7 +50,7 @@ ls *flags:
 serve *flags:
     cargo run -- serve {{flags}}
 
-# Attach a custom domain to a Pages bag. Pass `-- -b public`.
+# Attach a custom domain to a Pages bag. Pass `-- -b cf-pages`.
 domain host *flags:
     cargo run -- domain {{host}} {{flags}}
 

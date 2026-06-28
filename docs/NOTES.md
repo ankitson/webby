@@ -1,3 +1,44 @@
+## 2026-06-28
+
+### Cloudflare Pages Bag Rename
+
+#### Goal
+Make the durable Cloudflare Pages bag name explicit instead of overloading the generic `public` label.
+
+#### Decision
+Use `cf-pages` as the preferred built-in Cloudflare Pages bag. Keep `public` as a compatibility alias when no user-defined `public` bag exists, so old commands like `webby deploy -b public` still resolve to the Cloudflare Pages built-in. If a user config explicitly defines `public`, that config wins.
+
+#### Verification
+- `cargo fmt --check`
+- `just check`
+- `cargo run -- --help`
+- `cargo run -- pub --help`
+- `cargo run -- where` showed the restored explicit `public` command bag alongside the new built-in `cf-pages` bag.
+
+### README Restructure
+
+#### Goal
+Make the README explain Webby's simplest value first: publish or preview a static site quickly, then layer in docs generation, metadata, previews, providers, and host integration.
+
+#### Discovery
+Recent history shows the core path stayed stable while the surrounding surface grew: Markdown docs apps, app-owned card metadata, reusable card manifests, static generated indexes, optimized WebP previews, and automatic stale-preview refreshes.
+
+#### Decision
+Rewrite the README around user requirements in increasing complexity. Add small Justfile wrappers around the global docme/Webby docs workflow, and tune CLI help toward the local quickstart with clearer descriptions for the common flags.
+
+#### Follow-up
+Add README screenshots generated from a temporary Webby cards page rather than AI art, so the images show the actual generated index surface. Add a clearer use-cases section, especially explaining embedding as "Webby owns card data/previews; another homepage owns the root page."
+
+#### Verification
+- `just readme-previews`
+- `just check`
+- `just docs-deploy`
+- `curl -fsS -I https://home.ankitson.com/webby/tmp-webby-docs/`
+- `curl -fsS https://home.ankitson.com/webby/tmp-webby-docs/README/` shows the Preview and Use Cases sections.
+- `curl -fsS -I https://home.ankitson.com/webby/tmp-webby-docs/docs/assets/webby-homeserver-cards.webp`
+- `curl -fsS -I https://home.ankitson.com/webby/tmp-webby-docs/docs/assets/webby-docs-and-apps-grid.webp`
+- Live `webby-cards.json` includes `tmp-webby-docs` with a versioned preview URL.
+
 ## 2026-06-25 — Preview Cache Busting
 
 Goal: prevent host pages from showing stale Webby preview thumbnails after card metadata or app content changes.

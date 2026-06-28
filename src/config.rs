@@ -6,6 +6,9 @@ use std::path::{Path, PathBuf};
 
 use crate::{Result, err};
 
+pub const CF_PAGES_BAG: &str = "cf-pages";
+pub const LEGACY_PUBLIC_BAG: &str = "public";
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum Host {
@@ -128,12 +131,22 @@ impl Config {
     }
 
     pub fn bag(&self, label: &str) -> Result<&Bag> {
-        self.bags.iter().find(|b| b.label == label).ok_or_else(|| {
-            err(format!(
-                "unknown bag '{label}' (have: {})",
-                self.labels().join(", ")
-            ))
-        })
+        self.bags
+            .iter()
+            .find(|b| b.label == label)
+            .or_else(|| {
+                if label == LEGACY_PUBLIC_BAG {
+                    self.bags.iter().find(|b| b.label == CF_PAGES_BAG)
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| {
+                err(format!(
+                    "unknown bag '{label}' (have: {})",
+                    self.labels().join(", ")
+                ))
+            })
     }
 
     pub fn default_bag(&self) -> Result<&Bag> {
@@ -173,8 +186,8 @@ pub fn sample_config() -> String {
                 "dir": "~/.local/share/webby/funnel",
                 "host": { "type": "tailscale-funnel", "path": "/", "background": true }
             },
-            "public": {
-                "dir": "~/.local/share/webby/public",
+            "cf-pages": {
+                "dir": "~/.local/share/webby/cf-pages",
                 "host": {
                     "type": "cloudflare-pages",
                     "project": "webby",
@@ -244,13 +257,17 @@ fn built_in_bags(data_dir: &Path) -> Vec<Bag> {
             },
         ),
         bag(
-            "public",
-            env::var("PUBLIC_DIR")
+            CF_PAGES_BAG,
+            env::var("CF_PAGES_DIR")
+                .or_else(|_| env::var("PUBLIC_DIR"))
                 .map(expand_path)
-                .unwrap_or_else(|_| data_dir.join("public")),
+                .unwrap_or_else(|_| data_dir.join(CF_PAGES_BAG)),
             Host::CloudflarePages {
-                url: env::var("PUBLIC_URL").ok(),
-                project: env::var("PUBLIC_PROJECT")
+                url: env::var("CF_PAGES_URL")
+                    .or_else(|_| env::var("PUBLIC_URL"))
+                    .ok(),
+                project: env::var("CF_PAGES_PROJECT")
+                    .or_else(|_| env::var("PUBLIC_PROJECT"))
                     .ok()
                     .or(Some("webby".to_string())),
                 account_id: env::var("CLOUDFLARE_ACCOUNT_ID")

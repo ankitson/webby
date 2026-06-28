@@ -1,3 +1,36 @@
+## 2026-06-28
+
+### Cloudflare Pages Bag Rename
+
+Added:
+- `cf-pages` as the preferred built-in Cloudflare Pages bag name.
+- Compatibility resolution for `-b public` when no explicit `public` bag is configured.
+- `CF_PAGES_DIR`, `CF_PAGES_URL`, and `CF_PAGES_PROJECT` env overrides, with the old `PUBLIC_*` env names still supported as fallbacks.
+
+Modified:
+- `webby pub` now stages into `cf-pages` unless a config explicitly defines the legacy `public` bag.
+- README, Justfile comments, and skill docs now use `cf-pages` for Cloudflare Pages examples.
+
+Why:
+- `public` was too generic for a provider-specific bag; `cf-pages` is clearer while preserving legacy command compatibility.
+
+### README Restructure
+
+Added:
+- A README quickstart that leads with publishing a static site locally.
+- README preview screenshots generated from a temporary homeserver-style Webby cards page.
+- A README use-cases section that explains local preview, homeserver launchers, docs hubs, temporary public demos, durable mini-sites, and embedding.
+- Progressive sections for local preview, Markdown docs, metadata/previews, providers, embedding, and configuration.
+- Local Justfile wrappers for the shared docme/Webby docs build and internal deploy workflow.
+- A `readme-previews` Justfile recipe backed by `scripts/generate-readme-previews.py`.
+- Python cache ignore rules for local screenshot-generation artifacts.
+
+Modified:
+- CLI help now points users at the local quickstart path before advanced commands and describes the common flags more clearly.
+
+Why:
+- The project has grown from simple static app staging into docs generation, card manifests, preview automation, and multiple hosting providers; the docs now introduce those concepts in that order.
+
 ## 2026-06-25
 
 ### Preview Cache Busting

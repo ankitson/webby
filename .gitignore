@@ -1,18 +1,25 @@
 node_modules/
 .wrangler/
 target/
+__pycache__/
+*.pyc
 
 # Secrets / environment — never commit.
 .env.secret
 *.secret
 
-# Generated browse listing for the public bag (rebuilt on every deploy).
+# Generated browse listings for cf-pages and the legacy public bag.
+bags/cf-pages/index.html
+bags/cf-pages/webby-card-grid.js
+bags/cf-pages/webby-cards.json
+bags/cf-pages/webby-previews/
 bags/public/index.html
 bags/public/webby-card-grid.js
 bags/public/webby-cards.json
 bags/public/webby-previews/
 
-# Scratch apps in any bag are never committed (tmp* rule, both bags).
+# Scratch apps in any bag are never committed.
+bags/cf-pages/tmp*
 bags/public/tmp*
 bags/internal/tmp*
 

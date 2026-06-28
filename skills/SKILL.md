@@ -23,7 +23,8 @@ Built-ins:
 - `local`: localhost preview, no config.
 - `tailnet`: `tailscale serve`.
 - `funnel`: `tailscale funnel`.
-- `public`: Cloudflare Pages.
+- `cf-pages`: Cloudflare Pages. In legacy configs, an explicit `public` bag
+  still wins; otherwise `public` is a compatibility alias.
 - `internal`: optional Caddy compatibility when configured by env.
 
 ## Local Preview
@@ -58,10 +59,10 @@ the current machine.
 
 ```sh
 webby pub ./vancouver-tides
-webby deploy -b public
+webby deploy -b cf-pages
 ```
 
-Always confirm with the user before `pub` or `deploy -b public`. Cloudflare
+Always confirm with the user before `pub` or `deploy -b cf-pages`. Cloudflare
 Pages publishes to the live internet and expects `CLOUDFLARE_ACCOUNT_ID` plus
 `CLOUDFLARE_API_TOKEN`, or a configured token command/reference.
 
@@ -72,7 +73,7 @@ webby add <path> [-b bag] [--name name] [--tmp] [--title T] [--description D] [-
 webby docs <dir> [-b bag] [--name name] [--tmp] [--title T] [--description D] [--property K=V]
 webby rm <name> [-b bag]
 webby open <name> [-b bag]
-webby domain <host> -b public
+webby domain <host> -b cf-pages
 webby preview [app] -b <bag> [--force]
 webby init
 ```
