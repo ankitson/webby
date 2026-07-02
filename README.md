@@ -14,17 +14,7 @@
   <img alt="A Webby launcher page with cards grouped into Documents and Applications rows, each with a real screenshot preview." src="docs/assets/webby-category-grouped-homepage.webp" width="820">
 </p>
 
-Webby is for the moment when you already have a static thing and just need it
-to live somewhere useful.
-
-Give Webby an HTML file, a folder with `index.html`, or a directory of Markdown
-files. It copies the artifact into a named **bag**, generates a small launcher
-page with cards and screenshots, writes reusable card data, and serves or
-publishes the bag through the provider you choose.
-
-No framework, app server, database, or build pipeline is required. Start with
-local preview; use Tailscale, Cloudflare Pages, Caddy, or a custom command when
-the same artifact needs to reach other people or machines.
+Webby makes publishing static sites dead simple for humans and agents. Point it at an HTML file, a folder with an `index.html`, or a directory of Markdown files, and Webby hosts it on the provider you choose — local, Tailscale, Cloudflare Pages, Caddy, or a custom command — with a generated launcher page, screenshot cards, and card data other sites can embed.
 
 ## Install
 
@@ -32,67 +22,43 @@ the same artifact needs to reach other people or machines.
 cargo install webby-deploy
 ```
 
-The installed binary is named `webby`.
-
-From a checkout:
-
-```sh
-cargo install --path .
-```
-
 ## Quickstart
 
-Preview an existing HTML file locally, with no config:
+Preview locally, with no config:
 
 ```sh
-webby add ./site.html -b local
+webby add ./site.html -b local          # a single HTML file
+webby add ./dist -b local --name app    # or a built static folder
 webby serve -b local
 ```
 
-Open `http://localhost:8765/site.html`.
+Open `http://localhost:8765/site.html`. Manage what's staged with `webby ls`,
+`webby open <name>`, `webby rm <name>`, and `webby where`; `webby ls` without
+`-b` lists every configured bag.
 
-Preview a built static site folder the same way:
+## Why Webby
 
-```sh
-webby add ./dist -b local --name my-site
-webby serve -b local
-```
+I wanted an easy way to host static pages that works the same across multiple providers, gives agents a place to show you rich HTML, and integrates into more complex setups. Use Webby when the page is done and the remaining problem is distribution:
 
-Folders should contain `index.html`; Webby serves that folder at
-`http://localhost:8765/my-site/`.
+- **Agent output:** prototypes and reports you want to inspect, keep, or share
+  after a session, without a deployment project per page.
+- **Homeserver launcher:** dashboards, one-off tools, and personal apps in one
+  bag with screenshots and a generated index instead of a folder listing.
+- **Repo docs:** `webby docs ./docs -b internal` from any repo gives a navigable
+  static docs app next to the tools it explains.
+- **Temporary public demo:** push a folder through Tailscale Funnel for a
+  short-lived public URL from the current machine.
+- **Durable public mini-site:** publish the same artifact to Cloudflare Pages
+  with `webby pub`.
+- **Embedded catalog:** another homepage renders Webby's card data and
+  screenshots without giving Webby the homepage.
 
-## Preview
-
-Webby pages are plain static pages: a generated card index, optimized previews,
-and a reusable card manifest beside it. The result is easy to host, inspect,
-cache, embed, or delete.
+Everything Webby writes is plain static files, so the result is easy to host,
+cache, embed, or delete:
 
 | Homeserver-style bag | Docs and apps together |
 | --- | --- |
 | ![A Webby generated cards page for a homeserver with docs, dashboards, apps, and temporary prototypes.](docs/assets/webby-homeserver-cards.webp) | ![A Webby generated cards page at a medium viewport with docs and apps in one static launcher.](docs/assets/webby-docs-and-apps-grid.webp) |
-
-## Why Webby
-
-Webby is deliberately small. It does not try to become your app platform, docs
-platform, or homepage CMS. It does one job: take static artifacts you already
-have and make them reachable.
-
-That makes it a good fit for:
-
-- AI-agent prototypes you want to inspect, keep, or share after a session.
-- Personal tools and homeserver apps that deserve a nicer index than a folder
-  listing.
-- Repo docs that should be published next to the dashboards and tools they
-  explain.
-- Generated reports, experiments, and scratch pages that should not require a
-  new deployment project.
-- Host pages that want card data and screenshots without giving Webby control
-  over the homepage.
-
-The constraint is intentional: if your artifact can be served as static files,
-Webby can probably publish it. If it needs auth, a database, background jobs, or
-server-side routing, keep those in your real app and use Webby for the static
-surfaces around it.
 
 ## The Mental Model
 
@@ -100,8 +66,8 @@ surfaces around it.
 `index.html`, or a generated docs app from Markdown.
 
 **Bags** are named staging directories with a hosting provider attached. The
-built-in bags cover local preview, private Tailscale, temporary public Funnel,
-Cloudflare Pages, and optional Caddy/internal hosting.
+built-in bags are listed under [Private Or Public
+Publishing](#private-or-public-publishing).
 
 **Deploying** a bag regenerates its static index and card manifest, refreshes
 missing or stale preview images, then asks the provider to make the bag
@@ -116,48 +82,7 @@ webby deploy -b <bag>
 
 For the `local` bag, use `webby serve` instead of `deploy`.
 
-## Use Cases
-
-Use Webby when the work is done and the remaining problem is distribution:
-
-- **Local preview:** stage a generated HTML report or prototype, then inspect it
-  at `localhost` without setting up a project-specific server.
-- **Homeserver launcher:** keep small dashboards, one-off tools, and repo docs
-  in one internal bag with screenshots and a generated index.
-- **Repo docs hub:** run `webby docs ./docs -b internal` from any repo and get a
-  navigable static docs app next to your tools.
-- **Temporary public demo:** push a folder through Tailscale Funnel when you
-  need a short-lived public URL from the current machine.
-- **Durable public mini-site:** publish the same static artifact through
-  Cloudflare Pages with `webby pub`.
-
-Embedding Webby means another page owns the homepage while Webby owns the app
-inventory. Run with `--no-index`; Webby still writes the useful parts:
-`webby-cards.json`, `webby-card-grid.js`, and `webby-previews/`. Your homepage
-can then render those cards inside its own navigation, theme, auth boundary, or
-layout.
-
-## 1. Local Preview
-
-Local preview is the safest path and needs no config:
-
-```sh
-webby add ./clock.html -b local
-webby serve -b local
-```
-
-Useful local commands:
-
-```sh
-webby ls -b local
-webby open clock -b local
-webby rm clock -b local
-webby where
-```
-
-`webby ls` lists every configured bag when you omit `-b`.
-
-## 2. Markdown Docs
+## Markdown Docs
 
 Publish a Markdown directory as a static docs app:
 
@@ -180,7 +105,7 @@ writes a generated homepage that links to the discovered pages. Optional YAML
 frontmatter can set page `title`, `description`, `tags`, `type`, `resource`,
 and `timestamp`.
 
-## 3. Card Metadata And Previews
+## Card Metadata And Previews
 
 Every generated bag includes:
 
@@ -231,7 +156,7 @@ Preview capture uses `uvx shot-scraper` plus Pillow. Generated preview URLs get
 a content hash query string when the image exists, so hosts can cache preview
 images aggressively while still picking up changed thumbnails.
 
-## 4. Private Or Public Publishing
+## Private Or Public Publishing
 
 Built-in bags:
 
@@ -270,7 +195,7 @@ webby pub ./landing-page --name landing-page
 For legacy configs, an explicit `public` bag still wins; otherwise the old
 `public` name is accepted as a compatibility alias for `cf-pages`.
 
-## 5. Embedding Webby In A Larger Site
+## Embedding Webby In A Larger Site
 
 Sometimes Webby should manage apps and card data, while another site owns the
 homepage. Use `--no-index` for that:
@@ -295,7 +220,7 @@ For a generated Webby index that still needs shared site chrome, set
 `indexChromeDir` in the bag config. Webby will inline optional `head.html` and
 `body.html` fragments from that directory.
 
-## 6. Configuration
+## Configuration
 
 Start with:
 
