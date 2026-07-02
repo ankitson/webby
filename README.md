@@ -10,6 +10,10 @@
   <a href="Cargo.toml"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
 
+<p align="center">
+  <img alt="A Webby launcher page with cards grouped into Documents and Applications rows, each with a real screenshot preview." src="docs/assets/webby-category-grouped-homepage.webp" width="820">
+</p>
+
 Webby is for the moment when you already have a static thing and just need it
 to live somewhere useful.
 

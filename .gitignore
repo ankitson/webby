@@ -25,3 +25,6 @@ bags/internal/tmp*
 
 # internal apps are not committed
 bags/internal/
+
+# gitignored sample homepage used for README screenshots
+sample-homepage/
