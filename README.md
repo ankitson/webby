@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="A Webby launcher page with cards grouped into Documents and Applications rows, each with a real screenshot preview." src="docs/assets/webby-category-grouped-homepage.webp" width="820">
+  <img alt="A Webby launcher page with cards grouped into Documents and Applications rows, each with a real screenshot preview." src="docs/assets/webby-category-grouped-homepage.png" width="820">
 </p>
 
 Webby makes publishing static sites dead simple for humans and agents. Point it at an HTML file, a folder with an `index.html`, or a directory of Markdown files, and Webby hosts it on the provider you choose — local, Tailscale, Cloudflare Pages, Caddy, or a custom command — with a generated launcher page, screenshot cards, and card data other sites can embed.
@@ -55,10 +55,6 @@ I wanted an easy way to host static pages that works the same across multiple pr
 
 Everything Webby writes is plain static files, so the result is easy to host,
 cache, embed, or delete:
-
-| Homeserver-style bag | Docs and apps together |
-| --- | --- |
-| ![A Webby generated cards page for a homeserver with docs, dashboards, apps, and temporary prototypes.](docs/assets/webby-homeserver-cards.webp) | ![A Webby generated cards page at a medium viewport with docs and apps in one static launcher.](docs/assets/webby-docs-and-apps-grid.webp) |
 
 ## The Mental Model
 
